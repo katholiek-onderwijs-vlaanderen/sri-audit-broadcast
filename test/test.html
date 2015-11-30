@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+	<title>Socket.io test...</title>
+
+	<script src="//ajax.googleapis.com/ajax/libs/angularjs/1.2.15/angular.min.js"></script>
+	<!--<script src="./scripts/3d_party/angular.js"></script>-->
+	<!--<script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/0.9.16/socket.io.min.js"></script>-->
+	<!--script src="https://cdn.socket.io/socket.io-1.3.6.js"></script-->
+	<script src="https://cdn.lukej.me/socket.io-client/0.9.17/socket.io.js"></script>
+
+	<!-- MY APP !!! -->
+	<!-- <script type="text/javascript" src="scripts/app.js"></script> -->
+</head>
+
+<body ng-app="MyApp">
+
+<div ng-controller="myCtrl" style="border: 1px solid black;">
+	<br />
+
+	MessageUrl: <input type="text" ng-model="messageUrl" ng-disabled="socket != null" style="width: 200pt">
+
+	MessageType: <input type="text" ng-model="messageType" style="width: 200pt"> <button ng-click="subscribeClick()">Subscribe</button> <button ng-click="unsubscribeClick()">Unsubscribe</button>
+
+	<!--<button ng-click="sendNewMessageClick()">Connect</button>-->
+	<div>Subscriptions:</div>
+	<ul><li ng-repeat="subscr in subscriptions track by $index">{{subscr}}</li></ul> <!--<ul><li ng-repeat="subscr in subscriptions track by $index">{{subscr}}</li></ul>-->
+	<div>Received Messages:</div>
+	<ul><li ng-repeat="msg in messages track by $index">{{msg}}</li></ul><!--<div ng-repeat="msg in messages track by $index">{{msg}}</div>-->
+	<div style="color: red;" ng-show="error.length > 0">{{error}}</div>
+</div>
+
+
+<script type="application/javascript">
+	var app = angular.module( 'MyApp', [] );
+
+	var myCtrlFunction = function( $scope, $http, $timeout ) {
+		$scope.messageUrl = window.location.origin
+//		$scope.broadcastUrl = "http://localhost:2345/messages/123456"
+		//$scope.messageUrl = "http://testnode01.vsko.be:2345"; //"https://localhost:2346"
+		//$scope.broadcastUrl = "https://localhost:2346/messages/123456"
+		$scope.messageType = "/schools";
+		$scope.subscriptions = [];
+
+		$scope.error = "";
+		$scope.messages = [];
+//		$scope.onConnectClick = function() {
+//			console.log( "Trying to connect to " )
+//		}
+
+		$scope.io = io;
+		$scope.socket = null;
+
+		var connectIfNotConnected = function() {
+			if ( $scope.socket == null ) {
+				$scope.error = "Trying to connect...";
+				$scope.socket = io.connect( $scope.messageUrl );
+				$scope.socket.on( 'connect', function ( data ) {
+					$scope.error = "Successfully connected...";
+					console.log( "CONNECTED: " + data );
+					//$scope.socket.join( 'persons' );
+					//$scope.socket.emit( 'subscribe', { room: 'persons' } )
+					//socket.emit('my other event', { my: 'data' });
+					if ( ! $scope.$$phase ) {
+						$scope.$apply();
+					}
+				} );
+				$scope.socket.on('update',  function ( data ) {
+					$scope.error = "New data arrived...";
+					console.log( data );
+					$scope.messages.push( JSON.stringify(data) + " (received " + new Date() + ")" );
+					if ( ! $scope.$$phase ) {
+						$scope.$apply();
+					}
+					//socket.emit('my other event', { my: 'data' });
+				} );
+				// $scope.socket.on( 'subscribe', function ( data ) {
+				// 	$scope.error = "New subscription...";
+				// 	console.log( data );
+				// 	$scope.messages.push( new Date() + "SUBSCRIBE: " + data );
+				// 	if ( ! $scope.$$phase ) {
+				// 		$scope.$apply();
+				// 	}
+				// 	//socket.emit('my other event', { my: 'data' });
+				// } );
+			}
+		}
+
+		connectIfNotConnected();
+
+		$scope.socket.emit('join', $scope.messageType);
+		// $scope.socket.join($scope.messageType, function() {
+		$scope.subscriptions.push( $scope.messageType );
+
+		$scope.subscribeClick = function() {
+			connectIfNotConnected();
+
+			$scope.socket.emit('join', $scope.messageType);
+			// $scope.socket.join($scope.messageType, function() {
+				$scope.subscriptions.push( $scope.messageType );
+			// });
+
+			//$scope.socket.emit( 'subscribe', { room: $scope.messageType } );
+
+		}
+		$scope.unsubscribeClick = function() {
+			// $scope.socket.emit( 'unsubscribe', { room: $scope.messageType } );
+
+			$scope.subscriptions = $scope.subscriptions.filter( function( i ) {
+				return i != $scope.messageType;
+			} );
+			$scope.socket.emit('leave', $scope.messageType);
+			// $scope.socket.leave($scope.messageType);
+		}
+	}
+
+	app.controller( 'myCtrl', myCtrlFunction ); //[ '$scope', '$http', myCtrlFunction ]
+</script>
+
+
+</body>
+
+</html>
