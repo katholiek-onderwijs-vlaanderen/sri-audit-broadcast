@@ -1,100 +1,90 @@
-# Example #
+# About
+The `sri-audit-broadcast` module gives you a possibility to create an audit trail of all your sri resources. 
+It also has a build-in broadcast services that sends out broadcasts when a new version has been created.
 
-To receive broadcast messages go to test page:
-[https://vsko-audit-broadcast-api-test.herokuapp.com/test](Link URL)
+# Usage
 
-Then run following script to create, update and delete a school (adapt to your userid, and eventually change school uuid or other details):
+Here you can find a example `server.js` file:
 
+	//Load all required dependencies.
+	var express = require('express');
+	var app = express();
+	var http = require('http');
+	var srv = new http.Server(app);
+	var auditBroadcast = require('sri-audit-broadcast');
+	
+	//Sri4node authentication functions.
+	var authentication = require('vsko-authentication')(app);
+	authentication.init();
+	
+	//Functions in order to do security lookup
+	var resourceToSecurityComponent = function (resource) {
+		return '/security/components/samenscholing-api';
+	};
+	var meToHref = function (me) {
+		return '/persons/' + me.uuid;
+	};
+	
+	//The configuration and initalisation
+	auditBroadcast.init({
+		app: app,
+		server: srv,
+		express: express,
+		authenticate: authentication.isAuthenticated,
+		identify: authentication.getMe,
+		security: {
+			host: 'http://localhost:8080/api',
+			component: resourceToSecurityComponent,
+			currentPersonHref: meToHref,
+			username: 'myBasicAuthUsername',
+			password: 'myBasicAuthPassword',
+			headers: {}
+		}
+	});
+	
+	//Start the http server
+	srv.listen(process.env.PORT || 3000, function(){
+		console.log('Node app is running at http://localhost:' + (process.env.PORT || 3000));
+	});
 
-```
-#!bash
+# Requirements
+* An sri interface
+* A running [sri-security-api](https://github.com/rodrigouroz/sri-security-api) to do security 
+* You need to use express on node.js
+* postgress 9.4
+* a reddis server
 
-export SERVER="https://testapi.vsko.be"
+# Configuration
+## app, server, express
+You need to pass these variables because we need to plug in our resources into your application.
 
-export SCHOOL=a2a3e6aa-a3a4-11e3-ace8-005056872b95
-export SCHOOL_DUMP="/tmp/s"
-export PERMALINK="/schools/${SCHOOL}"
+## authenticate
+Is a sri4node function you can find the documentation [here](https://github.com/dimitrydhondt/sri4node#authenticate)
 
-curl http://api.vsko.be${PERMALINK} > ${SCHOOL_DUMP}
+## identify
+Is a sri4node function you can find the documentation [here](https://github.com/dimitrydhondt/sri4node#identify)
 
-export FILE="/tmp/t"
-export TS=`date -u +%FT%TZ`
-export KEY=`uuidgen`
+## security
+We also need to set some variables in order to connect to the security api
 
-echo "{" > ${FILE}
-echo "\"key\": \"${KEY}\"," >> ${FILE}
-echo "\"timestamp\": \"${TS}\"," >> ${FILE}
-echo "\"person\": \"/persons/cf2dccb2-c77c-4402-e044-d4856467bfb8\"," >> ${FILE}
-echo "\"component\": \"/security/components/vos-api\"," >> ${FILE}
-echo "\"operation\": \"CREATE\"," >> ${FILE}
-echo "\"type\": \"SCHOOL\"," >> ${FILE}
-echo "\"resource\": \"${PERMALINK}\"," >> ${FILE}
-echo "\"document\": " >> ${FILE}
-cat ${SCHOOL_DUMP} >> ${FILE}
-echo "}" >> ${FILE}
+#### host
+Where is the security api located.
 
-curl -u johannes.govaerts -i -H "Content-Type: application/json" ${SERVER}/versions/${KEY} --upload-file ${FILE}
+#### component
+This function has to return a component href to check the rights of this component. It receives these parameter :
 
-sleep 60
+* `resource` a href to the resource for which a version has been created.
 
-sed -i "s/029843/029850/g" ${SCHOOL_DUMP}
+#### currentPersonHref
+This function has to return a person href to check if this person has rights to the contents of a version. It receives these parameter :
 
-export TS=`date -u +%FT%TZ`
-export KEY=`uuidgen`
+* `me` the result of the identify function.
 
-echo "{" > ${FILE}
-echo "\"key\": \"${KEY}\"," >> ${FILE}
-echo "\"timestamp\": \"${TS}\"," >> ${FILE}
-echo "\"person\": \"/persons/cf2dccb2-c77c-4402-e044-d4856467bfb8\"," >> ${FILE}
-echo "\"component\": \"/security/components/vos-api\"," >> ${FILE}
-echo "\"operation\": \"UPDATE\"," >> ${FILE}
-echo "\"type\": \"SCHOOL\"," >> ${FILE}
-echo "\"resource\": \"${PERMALINK}\"," >> ${FILE}
-echo "\"document\": " >> ${FILE}
-cat ${SCHOOL_DUMP} >> ${FILE}
-echo "}" >> ${FILE}
+#### username & password (optional)
+If the access to the security api requires basic authentication you can specify the credentials.
 
-curl -u johannes.govaerts -i -H "Content-Type: application/json" ${SERVER}/versions/${KEY} --upload-file ${FILE}
+#### headers (optional)
+If the access to the security api requires you to have custom headers set you can add these.
 
-sleep 60
-
-sed -i "s/Kapelsesteenweg/Kapelsebaan/" ${SCHOOL_DUMP}
-
-export TS=`date -u +%FT%TZ`
-export KEY=`uuidgen`
-
-echo "{" > ${FILE}
-echo "\"key\": \"${KEY}\"," >> ${FILE}
-echo "\"timestamp\": \"${TS}\"," >> ${FILE}
-echo "\"person\": \"/persons/cf2dccb2-c77c-4402-e044-d4856467bfb8\"," >> ${FILE}
-echo "\"component\": \"/security/components/vos-api\"," >> ${FILE}
-echo "\"operation\": \"UPDATE\"," >> ${FILE}
-echo "\"type\": \"SCHOOL\"," >> ${FILE}
-echo "\"resource\": \"${PERMALINK}\"," >> ${FILE}
-echo "\"document\": " >> ${FILE}
-cat ${SCHOOL_DUMP} >> ${FILE}
-echo "}" >> ${FILE}
-
-curl -u johannes.govaerts -i -H "Content-Type: application/json" ${SERVER}/versions/${KEY} --upload-file ${FILE}
-
-sleep 60
-
-export TS=`date -u +%FT%TZ`
-export KEY=`uuidgen`
-
-echo "{" > ${FILE}
-echo "\"key\": \"${KEY}\"," >> ${FILE}
-echo "\"timestamp\": \"${TS}\"," >> ${FILE}
-echo "\"person\": \"/persons/cf2dccb2-c77c-4402-e044-d4856467bfb8\"," >> ${FILE}
-echo "\"component\": \"/security/components/vos-api\"," >> ${FILE}
-echo "\"operation\": \"DELETE\"," >> ${FILE}
-echo "\"type\": \"SCHOOL\"," >> ${FILE}
-echo "\"resource\": \"${PERMALINK}\"" >> ${FILE}
-#echo "\"resource_key\": \"${SCHOOL}\"" >> ${FILE}
-echo "}" >> ${FILE}
-
-curl -u johannes.govaerts -i -H "Content-Type: application/json" ${SERVER}/versions/${KEY} --upload-file ${FILE}
-
-```
-
-
+# Test broadcast
+You can test the broadcast api by going to: [http://localhost:3000/test](http://localhost:3000/test)
