@@ -1,5 +1,5 @@
 {
-  "name": "audit_broadcast",
+  "name": "sri-audit-broadcast",
   "version": "1.0.0",
   "private": true,
   "description": "Audit and broadcast server",

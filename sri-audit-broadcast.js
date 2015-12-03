@@ -45,7 +45,6 @@ module.exports = {
 
     var app = config.app;
     var srv = config.server;
-    var express = config.express;
 
     // using "old" socket.io because socket.io 1.0 seems to have a long connection setup
     // on heroku with lots of probe packets
@@ -112,6 +111,8 @@ module.exports = {
       // others can only be checked in post-processing.
       if (req.query.resource) {
         consultSecurityApi(me, deferred, req.query.resource.split(','));
+      } else if (req.query.resources) {
+        consultSecurityApi(me, deferred, req.query.resources.split(','));
       } else {
         deferred.resolve();
       }
@@ -140,7 +141,7 @@ module.exports = {
       if (req.path.split('/')[2]) {
         handleGenericResponse(resp, $u.generateError(//(status, type, errors) {
           404, 'no.list.resource.request', 'This resource can only be retrieved as list resource.'));
-      } else if (! req.query.resource) {
+      } else if (! req.query.resource && !req.query.resources) {
         handleGenericResponse(resp, $u.generateError(404,
           'resource.parameter.mandatory', '\'resource\' is a mandatory search parameter.'));
       } else if (req.query.orderBy || req.query.descending) {
@@ -275,18 +276,37 @@ module.exports = {
       };
     };
 
+    var resourcesFilter = function (value, select) {
+      var deferred = Q.defer();
+      var permalinks;
+      if (value) {
+        permalinks = value.split(',');
+
+        select.sql(' and resource in (').array(permalinks).sql(') ');
+        deferred.resolve();
+      } else {
+        deferred.reject();
+      }
+      return deferred.promise;
+    };
+
     var handleHistoryListQueryResult = function (req, result) {
       var deferred = Q.defer();
       var rows;
       rows = result.rows;
       rows.forEach(function (row, index) {
-        if (rows[index + 1]) {
-          row.from = '/versions/' + rows[index + 1].key;
+        // take in count that the query could bring different type of resources in the same result ('resources' parameter)
+        var sameResourceVersions = rows.slice(index + 1).filter(function(version) {
+          return version.resource === row.resource;
+        });
+        var fromVersion = sameResourceVersions.length > 0 ? sameResourceVersions[0] : null;
+        if (fromVersion) {
+          row.from = '/versions/' + fromVersion.key;
         }
         row.to = '/versions/' + row.key;
         //if (operation != 'DELETE') { // TODO: generate decent error message at these kind of errors
         if (row.operation === 'UPDATE') {
-          row.patch = jiff.diff(rows[index + 1] ? rows[index + 1].document : null, row.document);
+          row.patch = jiff.diff(fromVersion ? fromVersion.document : null, row.document);
         }
       });
       rows.forEach(function (row) {
@@ -428,6 +448,7 @@ module.exports = {
           query: {
             from: orderFilter('from'),
             tokey: orderFilter('to'),
+            resources: resourcesFilter,
             defaultFilter: $q.defaultFilter
           },
           map: {
@@ -482,7 +503,7 @@ module.exports = {
       res.send('DONE.');
     });
 
-    app.use('/test', express.static(__dirname + '/test/test.html'));
+    app.use('/test', config.express.static(__dirname + '/test/test.html'));
 
     io.sockets.on('connection', function (socket) {
       console.log('\n\n *** RECEIVED CONNECTION: ' + socket + ' ***\n\n');
