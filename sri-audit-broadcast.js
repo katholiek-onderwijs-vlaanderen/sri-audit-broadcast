@@ -135,11 +135,13 @@ module.exports = {
       return deferred.promise;
     };
 
-    var doSecurityCheckPut = function (database, element, me) {
-      var deferred = Q.defer();
-      consultSecurityApi(me, deferred, [element.body.component]);
-      return deferred.promise;
-    };
+var doSecurityCheckPut = function (database, elements, me) {
+  var deferred = Q.defer();
+  consultSecurityApi(me, deferred, elements.map(function (e) {
+    return e.body.resource;
+  }));
+  return deferred.promise;
+};
 
     function handleGenericResponse (resp, obj) {
       resp.status(obj.status).send(obj);
@@ -325,29 +327,35 @@ module.exports = {
       return deferred.promise;
     };
 
-    var broadcast = function (database, element) {
-      var deferred = Q.defer();
-      // TODO: alter in such way that audit function always stores result even if broadcast fails !
-      // TODO: check sri4node: error like invalid element.type is silently thrown away??
-      var resourceName = '/' + inflect.pluralize(element.body.type.toLowerCase());
-      var notificationMsg = {
-        current: '/versions/' + element.body.key,
-        previous: 'TODO!', //TODO lookup with db query
-        timestamp: element.body.timestamp,
-        person: element.body.person,
-        operation: element.body.operation,
-        type: element.body.type,
-        permalink: element.body.resource
-      };
-
-      console.log('resourceName: ', resourceName);
-      console.log('notificationMsg: ', notificationMsg);
-      io.sockets.to(resourceName).emit('update', notificationMsg);
-      io.sockets.to(element.body.resource).emit('update', notificationMsg);
-
-      deferred.resolve();
-      return deferred.promise;
+var broadcast = function (database, elements) {
+  var deferred = Q.defer();
+  // TODO: alter in such way that audit function always stores result even if broadcast fails !
+  // TODO: check sri4node: error like invalid element.type is silently thrown away??
+  elements.forEach(function(element) {
+    var resourceName = '/' + inflect.pluralize(element.body.type.toLowerCase());
+    if (resourceName === '/people') {
+      // seems we don't use the ordinary plural of person...
+      resourceName = '/persons'
+    }
+    var notificationMsg = {
+      current: '/versions/' + element.body.key,
+      previous: 'TODO!', //TODO lookup with db query
+      timestamp: element.body.timestamp,
+      person: element.body.person,
+      operation: element.body.operation,
+      type: element.body.type,
+      permalink: element.body.resource
     };
+
+    console.log('resourceName: ', resourceName);
+    console.log('notificationMsg: ', notificationMsg);
+    io.sockets.to(resourceName).emit('update', notificationMsg);
+    io.sockets.to(element.body.resource).emit('update', notificationMsg);
+  });
+
+  deferred.resolve();
+  return deferred.promise;
+};
 
     sri4node.configure(app, pg, {
       logrequests: true,
@@ -476,7 +484,10 @@ module.exports = {
       ]
     });
 
-    var redisURL = url.parse(process.env.REDIS_URL);
+
+app.get('/history', setFixedOrderForHistoryAndCheckSomeCustomPrerequisites);
+
+var redisURL = url.parse(process.env.REDIS_URL);
 
     var pub = redis.createClient(redisURL.port, redisURL.hostname, {return_buffers: true}); // eslint-disable-line camelcase
     var sub = redis.createClient(redisURL.port, redisURL.hostname, {return_buffers: true}); // eslint-disable-line camelcase
