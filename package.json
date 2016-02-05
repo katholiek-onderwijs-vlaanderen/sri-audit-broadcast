@@ -1,7 +1,7 @@
 {
   "name": "sri-audit-broadcast",
   "version": "1.0.0",
-  "private": true,
+  "private": false,
   "description": "Audit and broadcast server",
   "main": "sri-audit-broadcast.js",
   "author": "johannes.govaerts",

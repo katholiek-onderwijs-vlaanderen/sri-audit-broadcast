@@ -33,12 +33,13 @@ Here you can find a example `server.js` file:
 		authenticate: authentication.isAuthenticated,
 		identify: authentication.getMe,
 		security: {
-			host: 'http://localhost:8080/api',
-			component: resourceToSecurityComponent,
-			currentPersonHref: meToHref,
-			username: 'myBasicAuthUsername',
-			password: 'myBasicAuthPassword',
-			headers: {}
+				enabled: true,
+				host: 'http://localhost:8080/api',
+				component: resourceToSecurityComponent,
+				currentPersonHref: meToHref,
+				username: 'myBasicAuthUsername',
+				password: 'myBasicAuthPassword',
+				headers: {}
 		}
 	});
 	
