@@ -5,7 +5,7 @@
   "description": "Audit and broadcast server",
   "main": "sri-audit-broadcast.js",
   "author": "johannes.govaerts",
-  "license": "private",
+  "license": "UNLICENSED",
   "scripts": {
     "start": "node js/server.js",
     "createdb": "./createdb.sh",
@@ -21,21 +21,35 @@
     "q": "1.4.1",
     "i": "0.3.3",
     "jiff": "0.7.2",
-    "socket.io" : "0.9.x",
+    "socket.io": "0.9.x",
     "socket.io-redis": "0.1.4",
     "redis": "1.0.0",
-    "needle-retry": "https://github.com/jgovaerts/node-needle-retry"
+    "needle-retry": "git+https://github.com/jgovaerts/node-needle-retry.git"
   },
   "devDependencies ": {
-    "socket.io-client" :  "0.9.x",
+    "socket.io-client": "0.9.x",
     "eslint": "1.4.3"
   },
- "engines": {
+  "engines": {
     "node": "4.1.1",
     "npm": "2.14.8"
   },
   "repository": {
     "type": "git",
-    "url": "git@github.com:jgovaerts/sri-audit-broadcast.git"
-  }
+    "url": "git+ssh://git@github.com/jgovaerts/sri-audit-broadcast.git"
+  },
+  "bugs": {
+    "url": "https://github.com/jgovaerts/sri-audit-broadcast/issues"
+  },
+  "homepage": "https://github.com/jgovaerts/sri-audit-broadcast#readme",
+  "directories": {
+    "test": "test"
+  },
+  "devDependencies": {},
+  "keywords": [
+    "sri",
+    "audit",
+    "broadcast",
+    "sri4node"
+  ]
 }
