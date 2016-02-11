@@ -5,7 +5,6 @@
 var inflect = require('i')();
 var jiff = require('jiff');
 
-var pg = require('pg');
 var sri4node = require('sri4node');
 var $u = sri4node.utils;
 var $s = sri4node.schemaUtils;
@@ -27,6 +26,7 @@ module.exports = {
 
     if(!config.app){ configParamNotSet('app')  }
     if(!config.server){ configParamNotSet('server')  }
+    if(!config.pg){ configParamNotSet('pg')  }
     if(!config.express){ configParamNotSet('express')  }
     if(!config.authenticate){ configParamNotSet('authenticate')  }
     if(!config.identify){ configParamNotSet('identify')  }
@@ -49,6 +49,7 @@ module.exports = {
 
     var app = config.app;
     var srv = config.server;
+    var pg = config.pg;
 
     // using "old" socket.io because socket.io 1.0 seems to have a long connection setup
     // on heroku with lots of probe packets
@@ -135,13 +136,13 @@ module.exports = {
       return deferred.promise;
     };
 
-var doSecurityCheckPut = function (database, elements, me) {
-  var deferred = Q.defer();
-  consultSecurityApi(me, deferred, elements.map(function (e) {
-    return e.body.resource;
-  }));
-  return deferred.promise;
-};
+    var doSecurityCheckPut = function (database, elements, me) {
+      var deferred = Q.defer();
+      consultSecurityApi(me, deferred, elements.map(function (e) {
+        return e.body.resource;
+      }));
+      return deferred.promise;
+    };
 
     function handleGenericResponse (resp, obj) {
       resp.status(obj.status).send(obj);
@@ -327,42 +328,43 @@ var doSecurityCheckPut = function (database, elements, me) {
       return deferred.promise;
     };
 
-var broadcast = function (database, elements) {
-  var deferred = Q.defer();
-  // TODO: alter in such way that audit function always stores result even if broadcast fails !
-  // TODO: check sri4node: error like invalid element.type is silently thrown away??
-  elements.forEach(function(element) {
-    var resourceName = '/' + inflect.pluralize(element.body.type.toLowerCase());
-    if (resourceName === '/people') {
-      // seems we don't use the ordinary plural of person...
-      resourceName = '/persons'
-    }
-    var notificationMsg = {
-      current: '/versions/' + element.body.key,
-      previous: 'TODO!', //TODO lookup with db query
-      timestamp: element.body.timestamp,
-      person: element.body.person,
-      operation: element.body.operation,
-      type: element.body.type,
-      permalink: element.body.resource
-    };
+  var broadcast = function (database, elements) {
+    var deferred = Q.defer();
+    // TODO: alter in such way that audit function always stores result even if broadcast fails !
+    // TODO: check sri4node: error like invalid element.type is silently thrown away??
+    elements.forEach(function(element) {
+      var resourceName = '/' + inflect.pluralize(element.body.type.toLowerCase());
+      if (resourceName === '/people') {
+        // seems we don't use the ordinary plural of person...
+        resourceName = '/persons'
+      }
+      var notificationMsg = {
+        current: '/versions/' + element.body.key,
+        previous: 'TODO!', //TODO lookup with db query
+        timestamp: element.body.timestamp,
+        person: element.body.person,
+        operation: element.body.operation,
+        type: element.body.type,
+        permalink: element.body.resource
+      };
 
-    console.log('resourceName: ', resourceName);
-    console.log('notificationMsg: ', notificationMsg);
-    io.sockets.to(resourceName).emit('update', notificationMsg);
-    io.sockets.to(element.body.resource).emit('update', notificationMsg);
-  });
+      console.log('resourceName: ', resourceName);
+      console.log('notificationMsg: ', notificationMsg);
+      io.sockets.to(resourceName).emit('update', notificationMsg);
+      io.sockets.to(element.body.resource).emit('update', notificationMsg);
+    });
 
-  deferred.resolve();
-  return deferred.promise;
-};
+    deferred.resolve();
+    return deferred.promise;
+  };
 
     sri4node.configure(app, pg, {
       logrequests: true,
-      logsql: false,
+      logsql: true,
       logdebug: false,
       authenticate: config.authenticate,
       identify: config.identify,
+      defaultdatabaseurl: config.databaseUrl,
       resources: [
         {
           type: '/versions',

@@ -9,6 +9,7 @@ Here you can find a example `server.js` file:
 	//Load all required dependencies.
 	var express = require('express');
 	var app = express();
+	var pg = require('pg');
 	var http = require('http');
 	var srv = new http.Server(app);
 	var auditBroadcast = require('sri-audit-broadcast');
@@ -30,6 +31,8 @@ Here you can find a example `server.js` file:
 		app: app,
 		server: srv,
 		express: express,
+		pg: pg,
+		databaseUrl: prosess.env.DATABASE_URL,
 		authenticate: authentication.isAuthenticated,
 		identify: authentication.getMe,
 		security: {
