@@ -3,7 +3,6 @@
  */
 
 var inflect = require('i')();
-var jiff = require('jiff');
 
 var sri4node = require('sri4node');
 var $u = sri4node.utils;
@@ -11,8 +10,6 @@ var $s = sri4node.schemaUtils;
 var $q = sri4node.queryUtils;
 var url = require('url');
 var Q = require('q');
-
-var needleRetry = require('needle-retry');
 
 module.exports = {
 
@@ -22,7 +19,7 @@ module.exports = {
     var configParamNotSet = function (param){
       console.log('ERROR: ' + param + ' parameter is not set. Check your configuration!');
       process.exit();
-    }
+    };
 
     if(!config.app){ configParamNotSet('app')  }
     if(!config.server){ configParamNotSet('server')  }
@@ -47,125 +44,21 @@ module.exports = {
       }
     }
 
+    //Load configuration
     var app = config.app;
     var srv = config.server;
     var pg = config.pg;
 
-    // using "old" socket.io because socket.io 1.0 seems to have a long connection setup
-    // on heroku with lots of probe packets
-    var io = require('socket.io').listen(srv, {log: false});
+    var io = require('socket.io').listen(srv, {log: false}); // using "old" socket.io because socket.io 1.0 seems to have a long connection setup on heroku with lots of probe packets
+
     var redis = require('redis');
     var RedisStore = require('socket.io/lib/stores/redis');
+    var redisURL = url.parse(process.env.REDIS_URL);
 
-    function consultSecurityApi (me, deferred, resourceList) {
-      if (!config.security.enabled){
-        deferred.resolve();
-      }else{
-        var batchSecurity = [];
-        var failed, j;
-        resourceList.forEach(function (resource) {
-          var securityUrl = '/security/query/allowed?ability=read' + '&component=' + config.security.component(resource)
-            + '&person=' + config.security.currentPersonHref(me) + '&resource=' + resource;
-          batchSecurity.push({
-            href: securityUrl,
-            verb: 'GET'
-          });
-        });
-        console.log('batchSecurity:', batchSecurity);
-        var reqOptions = {needle: {json: true}};
-        if(config.security.username && config.security.password) {
-          reqOptions.needle.username = config.security.username;
-          reqOptions.needle.password = config.security.password;
-        }
+    var security = require('./js/security.js')(config);
+    var history = require('./js/history.js');
 
-        if(config.security.headers) {
-          reqOptions.needle.headers = config.security.headers
-        }
-
-        needleRetry.request('PUT', config.security.host + '/security/query/batch', batchSecurity, reqOptions, function (err, response) {
-          if (err) {
-            console.log('security error : ', err);
-            console.log('security error response: ', response);
-            deferred.reject(err);
-          } else {
-            failed = [];
-            if (response.statusCode === 200) {
-              console.log('BODY: ', response.body);
-              for (j = 0; j < response.body.length; j ++) {
-                if (response.body[j].status !== 200 || ! response.body[j].body) {
-                  failed.push(response.body[j].href);
-                }
-              }
-              if (failed.length === 0) {
-                deferred.resolve();
-              } else {
-                console.log('Security request(s) not allowed:', failed);
-                deferred.reject({
-                  statusCode: 403,
-                  body: {}
-                });
-              }
-            } else {
-              console.log('Received status ' + response.statusCode + ' -> reject.');
-              deferred.reject();
-            }
-          }
-        });
-      }
-    }
-
-    function checkAccessOnResource (req, resp, db, me) {
-      var deferred = Q.defer();
-      // Only GET requests with specific resource specified can be checked in pre-process secure function,
-      // others can only be checked in post-processing.
-      if (req.query.resource) {
-        consultSecurityApi(me, deferred, req.query.resource.split(','));
-      } else if (req.query.resources) {
-        consultSecurityApi(me, deferred, req.query.resources.split(','));
-      } else {
-        deferred.resolve();
-      }
-      return deferred.promise;
-    }
-
-    var doSecurityCheckGet = function (database, elements, me) {
-      var deferred = Q.defer();
-      consultSecurityApi(me, deferred, elements.map(function (e) {
-        return e.resource;
-      }));
-      return deferred.promise;
-    };
-
-    var doSecurityCheckPut = function (database, elements, me) {
-      var deferred = Q.defer();
-      consultSecurityApi(me, deferred, elements.map(function (e) {
-        return e.body.resource;
-      }));
-      return deferred.promise;
-    };
-
-    function handleGenericResponse (resp, obj) {
-      resp.status(obj.status).send(obj);
-    }
-
-    var setFixedOrderForHistoryAndCheckSomeCustomPrerequisites = function (req, resp, next) {
-      if (req.path.split('/')[2]) {
-        handleGenericResponse(resp, $u.generateError(//(status, type, errors) {
-          404, 'no.list.resource.request', 'This resource can only be retrieved as list resource.'));
-      } else if (! req.query.resource && !req.query.resources) {
-        handleGenericResponse(resp, $u.generateError(404,
-          'resource.parameter.mandatory', '\'resource\' is a mandatory search parameter.'));
-      } else if (req.query.orderBy || req.query.descending) {
-        handleGenericResponse(resp, $u.generateError(404,
-          'orderby.and.descending.parameters.not.allowed',
-          'Parameters orderby and descending not allowed on this resource.'));
-      } else {
-        req.query.orderBy = 'timestamp';
-        req.query.descending = 'true';
-        next();
-      }
-    };
-
+    //Some Functions
     var onlyAllowInsertNoUpdate = function () {
       var deferred = Q.defer();
       deferred.reject({
@@ -301,62 +194,37 @@ module.exports = {
       return deferred.promise;
     };
 
-    var handleHistoryListQueryResult = function (req, result) {
+    var broadcast = function (database, elements) {
       var deferred = Q.defer();
-      var rows;
-      rows = result.rows;
-      rows.forEach(function (row, index) {
-        // take in count that the query could bring different type of resources in the same result ('resources' parameter)
-        var sameResourceVersions = rows.slice(index + 1).filter(function(version) {
-          return version.resource === row.resource;
-        });
-        var fromVersion = sameResourceVersions.length > 0 ? sameResourceVersions[0] : null;
-        if (fromVersion) {
-          row.from = '/versions/' + fromVersion.key;
+      // TODO: alter in such way that audit function always stores result even if broadcast fails !
+      // TODO: check sri4node: error like invalid element.type is silently thrown away??
+      elements.forEach(function(element) {
+        var resourceName = '/' + inflect.pluralize(element.body.type.toLowerCase());
+        if (resourceName === '/people') {
+          // seems we don't use the ordinary plural of person...
+          resourceName = '/persons'
         }
-        row.to = '/versions/' + row.key;
-        //if (operation != 'DELETE') { // TODO: generate decent error message at these kind of errors
-        if (row.operation === 'UPDATE') {
-          row.patch = jiff.diff(fromVersion ? fromVersion.document : null, row.document);
-        }
+        var notificationMsg = {
+          current: '/versions/' + element.body.key,
+          previous: 'TODO!', //TODO lookup with db query
+          timestamp: element.body.timestamp,
+          person: element.body.person,
+          operation: element.body.operation,
+          type: element.body.type,
+          permalink: element.body.resource
+        };
+
+        console.log('resourceName: ', resourceName);
+        console.log('notificationMsg: ', notificationMsg);
+        io.sockets.to(resourceName).emit('update', notificationMsg);
+        io.sockets.to(element.body.resource).emit('update', notificationMsg);
       });
-      rows.forEach(function (row) {
-        delete row.key;
-        delete row.document;
-      });
-      deferred.resolve(rows);
+
+      deferred.resolve();
       return deferred.promise;
     };
 
-  var broadcast = function (database, elements) {
-    var deferred = Q.defer();
-    // TODO: alter in such way that audit function always stores result even if broadcast fails !
-    // TODO: check sri4node: error like invalid element.type is silently thrown away??
-    elements.forEach(function(element) {
-      var resourceName = '/' + inflect.pluralize(element.body.type.toLowerCase());
-      if (resourceName === '/people') {
-        // seems we don't use the ordinary plural of person...
-        resourceName = '/persons'
-      }
-      var notificationMsg = {
-        current: '/versions/' + element.body.key,
-        previous: 'TODO!', //TODO lookup with db query
-        timestamp: element.body.timestamp,
-        person: element.body.person,
-        operation: element.body.operation,
-        type: element.body.type,
-        permalink: element.body.resource
-      };
-
-      console.log('resourceName: ', resourceName);
-      console.log('notificationMsg: ', notificationMsg);
-      io.sockets.to(resourceName).emit('update', notificationMsg);
-      io.sockets.to(element.body.resource).emit('update', notificationMsg);
-    });
-
-    deferred.resolve();
-    return deferred.promise;
-  };
+    app.get('/history', history.setFixedOrderForHistoryAndCheckSomeCustomPrerequisites);
 
     sri4node.configure(app, pg, {
       logrequests: true,
@@ -378,7 +246,7 @@ module.exports = {
             'PUT'
           ],
           public: false,
-          secure: [checkAccessOnResource],
+          secure: [security.checkAccessOnResource],
           schema: {
             $schema: 'http://json-schema.org/schema#',
             title: 'A regular resource that contains a specific version of a resource in the API.',
@@ -425,24 +293,24 @@ module.exports = {
             resource: {},
             document: {oninsert: mapInsertDocument}
           },
-          // After read, update, insert or delete
-          // you can perform extra actions.
-          afterread: [doSecurityCheckGet, addPrevAndNextLinksToJson],
+          afterread: [security.doSecurityCheckGet, addPrevAndNextLinksToJson],
           afterupdate: [onlyAllowInsertNoUpdate],
-          afterinsert: [doSecurityCheckPut, broadcast],
+          afterinsert: [security.doSecurityCheckPut, broadcast],
           afterdelete: []
         },
         {
           type: '/history',
           table: 'versions',
+/*
           cache: {
             ttl: 120,
             type: 'redis',
             redis: process.env.REDIS_URL
           },
+*/
           methods: ['GET'],
           public: false,
-          secure: [checkAccessOnResource],
+          secure: [security.checkAccessOnResource],
           schema: {
             $schema: 'http://json-schema.org/schema#',
             title: 'A special resource that presents the history a resource in the API.',
@@ -477,7 +345,7 @@ module.exports = {
             resource: {},
             document: {}
           },
-          handlelistqueryresult: handleHistoryListQueryResult,
+          handlelistqueryresult: history.handleHistoryListQueryResult,
           afterread: [],
           afterupdate: [],
           afterinsert: [],
@@ -485,11 +353,6 @@ module.exports = {
         }
       ]
     });
-
-
-app.get('/history', setFixedOrderForHistoryAndCheckSomeCustomPrerequisites);
-
-var redisURL = url.parse(process.env.REDIS_URL);
 
     var pub = redis.createClient(redisURL.port, redisURL.hostname, {return_buffers: true}); // eslint-disable-line camelcase
     var sub = redis.createClient(redisURL.port, redisURL.hostname, {return_buffers: true}); // eslint-disable-line camelcase
@@ -507,8 +370,6 @@ var redisURL = url.parse(process.env.REDIS_URL);
       redisSub: sub,
       redisClient: client
     }));
-
-    app.get('/history', setFixedOrderForHistoryAndCheckSomeCustomPrerequisites);
 
     app.get('/updates', config.authenticate, function (req, res) {
       var forwardProto = req.get('X-Forwarded-Proto');
