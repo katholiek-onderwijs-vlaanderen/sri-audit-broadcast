@@ -17,7 +17,7 @@ module.exports = {
 
     //Check configuration
     var configParamNotSet = function (param){
-      console.log('ERROR: ' + param + ' parameter is not set. Check your configuration!');
+      console.error(param + ' parameter is not set. Check your configuration!');
       process.exit();
     };
 
@@ -34,12 +34,12 @@ module.exports = {
     }else{
       if(!config.security.component){ configParamNotSet('security.component')  }
       if(typeof config.security.component != 'function'){
-        console.log('ERROR: security.component has to be a function!');
+        console.error('security.component has to be a function!');
         process.exit();
       }
       if(!config.security.currentPersonHref){ configParamNotSet('security.currentPersonHref')  }
       if(typeof config.security.currentPersonHref != 'function'){
-        console.log('ERROR: security.currentPersonHref has to be a function!');
+        console.error('security.currentPersonHref has to be a function!');
         process.exit();
       }
     }
@@ -57,146 +57,10 @@ module.exports = {
 
     var security = require('./js/security.js')(config);
     var history = require('./js/history.js');
-
-    //Some Functions
-    var onlyAllowInsertNoUpdate = function () {
-      var deferred = Q.defer();
-      deferred.reject({
-        statusCode: 409,
-        body: {
-          code: 'existing.version.cannot.be.updated',
-          message: 'Existing versions cannot be updated. A new version should be created.'
-        }
-      });
-      return deferred.promise;
-    };
-
-    var addPrevAndNextLinksToJson = function (database, elements) {
-      return Q.all(elements.map(function (element) {
-        var deferred = Q.defer();
-        var query = $u.prepareSQL('key');
-        query.sql('select next, previous from versions_previous_next_view where key = ').param(element.key);
-        $u.executeSQL(database, query).then(function (result) {
-          if (result.rows[0].next && result.rows[0].next !== element.key) {
-            element.$$meta.next = '/versions/' + result.rows[0].next;
-          }
-          if (result.rows[0].previous && result.rows[0].previous !== element.key) {
-            element.$$meta.previous = '/versions/' + result.rows[0].previous;
-          }
-          deferred.resolve();
-        }).catch(function (err) {
-          console.log(err);
-          deferred.reject(err);
-        });
-        return deferred.promise;
-      }));
-    };
-
-    var removeDollarDollarFieldsFromJSON = function (json) {
-      if (json instanceof Array) {
-        json.forEach(function (e) {
-          removeDollarDollarFieldsFromJSON(e);
-        });
-      } else if (json instanceof Object) {
-        Object.keys(json).forEach(function (key) {
-          if (json[key] instanceof Object) {
-            removeDollarDollarFieldsFromJSON(json[key]);
-          }
-          if (key.substr(0, 2) === '$$') {
-            delete json[key];
-          }
-        });
-      }
-    };
-
-    var mapInsertDocument = function (key, element) {
-      removeDollarDollarFieldsFromJSON(element);
-      return element;
-    };
-
-    var parsePermalink = function (permalink) {
-      var deferred = Q.defer();
-      var ret, key, splitted;
-      // TODO: check on only  letters in type en only hex in key !
-      ret = {};
-      console.log(permalink);
-      console.log(typeof permalink);
-      if (typeof permalink === 'string') {
-        splitted = permalink.split('/');
-        if (splitted.length === 3) {
-          ret.resourcetype = inflect.singularize(splitted[1]).toUpperCase();
-          key = splitted[2];
-          if (key.length === 36) {
-            ret.key = key;
-            deferred.resolve(ret);
-          } else {
-            deferred.reject({
-              code: 'parameter.invalid.resource.uuid',
-              value: key
-            });
-          }
-        } else {
-          deferred.reject({
-            code: 'parameter.invalid.value',
-            value: permalink
-          });
-        }
-      } else {
-        deferred.reject({
-          code: 'parameter.invalid.value',
-          value: permalink
-        });
-      }
-      return deferred.promise;
-    };
-
-    var orderFilter = function (direction) {
-      return function (value, select) {
-        var deferred = Q.defer();
-        var operator;
-        if (value) {
-          if (Array.isArray(value)) {
-            //TODO: adapr to work in sri4node
-            deferred.reject({
-              code: 'only.one.value.allowed',
-              parameter: direction
-            });
-          } else {
-            if (direction === 'from') {
-              operator = '<=';
-            } else {
-              operator = '>=';
-            }
-            parsePermalink(value).then(function (result) {
-              select.sql(' AND timestamp ' + operator
-                + ' (select timestamp from versions where key=\'' + result.key + '\')');
-              deferred.resolve();
-            });
-          }
-        } else {
-          deferred.resolve();
-        }
-        return deferred.promise;
-      };
-    };
-
-    var resourcesFilter = function (value, select) {
-      var deferred = Q.defer();
-      var permalinks;
-      if (value) {
-        permalinks = value.split(',');
-
-        select.sql(' and resource in (').array(permalinks).sql(') ');
-        deferred.resolve();
-      } else {
-        deferred.reject();
-      }
-      return deferred.promise;
-    };
+    var versions = require('./js/versions.js');
 
     var broadcast = function (database, elements) {
       var deferred = Q.defer();
-      // TODO: alter in such way that audit function always stores result even if broadcast fails !
       // TODO: check sri4node: error like invalid element.type is silently thrown away??
       elements.forEach(function(element) {
         var resourceName = '/' + inflect.pluralize(element.body.type.toLowerCase());
@@ -214,8 +78,8 @@ module.exports = {
           permalink: element.body.resource
         };
 
-        console.log('resourceName: ', resourceName);
-        console.log('notificationMsg: ', notificationMsg);
+        console.log('resourceName: ' + resourceName);
+        console.log('notificationMsg: ' + JSON.stringify(notificationMsg));
         io.sockets.to(resourceName).emit('update', notificationMsg);
         io.sockets.to(element.body.resource).emit('update', notificationMsg);
       });
@@ -258,16 +122,16 @@ module.exports = {
               person: $s.string('A permalink to the person that made the modification.'),
               //TODO: can we use $s.permalink?
               component: $s.string('A permalink to the /security/component that manages this resource.'),
-              operation: $s.string('CREATE, UPDATE or DELETE'),
-              // should be enum
+              operation: {
+                description: 'Opperation that has been performed on the resource',
+                enum: ['CREATE', 'UPDATE', 'DELETE', 'INITIALIZE']
+              },
               type: $s.string('The $$meta.type of the original resource.'),
-              //resource_key : $s.guid("Key of the resource, use in case of DELETE operation instead of document"),
               resource: $s.string('Permalink of the resource'),
               document: {
-                // should be valid json!
                 type: 'object',
                 description: 'The full resource as it was in this version, at the given timestamp.'
-              }  // $s.string("The full resource as it was in this version, at the given timestamp.")
+              }
             },
             required: [
               'key',
@@ -276,10 +140,11 @@ module.exports = {
               'component',
               'operation',
               'type',
-              'resource'
-            ]  //TODO: verify if document is present in each PUT, otherwise send 409
+              'resource',
+              'document'
+            ]
           },
-          validate: [],
+          validate: [versions.notSameVersion],
           query: {
             defaultFilter: $q.defaultFilter
           },
@@ -291,10 +156,10 @@ module.exports = {
             operation: {},
             type: {},
             resource: {},
-            document: {oninsert: mapInsertDocument}
+            document: {oninsert: versions.mapInsertDocument}
           },
-          afterread: [security.doSecurityCheckGet, addPrevAndNextLinksToJson],
-          afterupdate: [onlyAllowInsertNoUpdate],
+          afterread: [security.doSecurityCheckGet, versions.addPrevAndNextLinksToJson],
+          afterupdate: [versions.onlyAllowInsertNoUpdate],
           afterinsert: [security.doSecurityCheckPut, broadcast],
           afterdelete: []
         },
@@ -332,9 +197,9 @@ module.exports = {
           },
           validate: [],
           query: {
-            from: orderFilter('from'),
-            tokey: orderFilter('to'),
-            resources: resourcesFilter,
+            from: history.orderFilter('from'),
+            tokey: history.orderFilter('to'),
+            resources: history.resourcesFilter,
             defaultFilter: $q.defaultFilter
           },
           map: {

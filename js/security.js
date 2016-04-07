@@ -6,7 +6,7 @@ var Q = require('q');
 var _ = require('lodash');
 var config;
 
-var consultSecurityApi = function (me, deferred, resourceList, ability) {
+function consultSecurityApi (me, deferred, resourceList, ability) {
 
   if (!config.security.enabled){
     deferred.resolve();
