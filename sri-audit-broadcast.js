@@ -92,7 +92,7 @@ module.exports = {
 
     sri4node.configure(app, pg, {
       logrequests: true,
-      logsql: true,
+      logsql: false,
       logdebug: false,
       authenticate: config.authenticate,
       identify: config.identify,
@@ -166,13 +166,11 @@ module.exports = {
         {
           type: '/history',
           table: 'versions',
-/*
           cache: {
             ttl: 120,
             type: 'redis',
             redis: process.env.REDIS_URL
           },
-*/
           methods: ['GET'],
           public: false,
           secure: [security.checkAccessOnResource],
@@ -183,8 +181,10 @@ module.exports = {
             properties: {
               timestamp: $s.timestamp('A timestamp when the update occurred.'),
               person: $s.string('A permalink to the person that made the modification.'),
-              operation: $s.string('CREATE, UPDATE or DELETE'),
-              // should be enum
+              operation: {
+                description: 'Opperation that has been performed on the resource',
+                enum: ['CREATE', 'UPDATE', 'DELETE', 'INITIALIZE']
+              },
               resource: $s.string('Permalink of the resource'),
               from: $s.string('A permalink to the previous version (if existing).'),
               to: $s.string('A permalink to the current version.'),

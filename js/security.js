@@ -11,6 +11,7 @@ function consultSecurityApi (me, deferred, resourceList, ability) {
   if (!config.security.enabled){
     deferred.resolve();
   }else{
+    console.log('security check');
     var batchSecurity = [];
     var failed, j;
 
@@ -72,6 +73,7 @@ module.exports = function (passedConfig) {
   config = passedConfig;
   return {
     checkAccessOnResource: function (req, resp, db, me) {
+      console.log("check access on resource");
       var deferred = Q.defer();
       // Only GET requests with specific resource specified can be checked in pre-process secure function,
       // others can only be checked in post-processing.

@@ -64,25 +64,43 @@ module.exports = {
     var d = Q.defer();
     console.log("validation");
     var query = $u.prepareSQL();
-    query.sql('SELECT * FROM versions WHERE resource = ').param(body.resource).sql(' ORDER BY timestamp desc');
-    $u.executeSQL(database, query).then(function(data){
-      console.log("old");
-      console.log(data.rows[0].document);
-      console.log("new");
-      removeDollarDollarFieldsFromJSON(body.document);
-      console.log(body.document);
-      if(JSON.stringify(data.rows[0].document) == JSON.stringify(body.document)){
-        d.reject({
-          statusCode: 409,
-          body: {
-            code: 'same.version',
-            message: 'This version is the same as the previous.'
-          }
-        });
-      }else{
-        d.resolve();
-      }
-    });
+    if(body.operation === 'INITIALIZE'){
+      query.sql('SELECT count(*) FROM versions WHERE resource = ').param(body.resource);
+      $u.executeSQL(database, query).then(function(data){
+        database.done();
+        console.log(data);
+        if (data.rows[0].count > 0) {
+          d.reject({
+            statusCode: 409,
+            body: {
+              code: 'initialize.first',
+              message: 'There are already versions of this resource. You can not initialize them.'
+            }
+          });
+        }else{
+          d.resolve();
+        }
+      });
+    }else{
+      query.sql('SELECT * FROM versions WHERE resource = ').param(body.resource).sql(' ORDER BY timestamp desc');
+      $u.executeSQL(database, query).then(function(data){
+        removeDollarDollarFieldsFromJSON(body.document);
+        //database.done();
+        console.log(body.document);
+        if(JSON.stringify(data.rows[0].document) == JSON.stringify(body.document)){
+          d.reject({
+            statusCode: 409,
+            body: {
+              code: 'same.version',
+              message: 'This version is the same as the previous.'
+            }
+          });
+        }else{
+          console.log("Validation DONE");
+          d.resolve();
+        }
+      });
+    }
     return d.promise;
   }
 };
