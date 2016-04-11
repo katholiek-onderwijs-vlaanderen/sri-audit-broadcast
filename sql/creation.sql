@@ -1,4 +1,4 @@
-CREATE TYPE operation AS ENUM ('CREATE', 'UPDATE', 'DELETE');
+CREATE TYPE operation AS ENUM ('CREATE', 'UPDATE', 'DELETE','INITIALIZE');
 
 CREATE TABLE versions (
     key            UUID PRIMARY KEY,
