@@ -1,6 +1,6 @@
 {
   "name": "sri-audit-broadcast",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "private": false,
   "description": "Audit and broadcast server",
   "main": "sri-audit-broadcast.js",
@@ -19,7 +19,6 @@
     "express-session": "1.11.3",
     "i": "0.3.3",
     "jiff": "0.7.2",
-    "lodash": "^4.9.0",
     "needle-retry": "^1.1.0",
     "pg": "4.4.1",
     "q": "1.4.1",

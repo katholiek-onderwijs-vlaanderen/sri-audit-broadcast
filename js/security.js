@@ -3,7 +3,6 @@
  */
 var needleRetry = require('needle-retry');
 var Q = require('q');
-var _ = require('lodash');
 var config;
 
 function consultSecurityApi (me, deferred, resourceList, ability) {
