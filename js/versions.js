@@ -64,7 +64,7 @@ module.exports = {
     var d = Q.defer();
     console.log("validation");
     var query = $u.prepareSQL();
-    if(body.operation === 'INITIALIZE'){
+    if(body.operation === 'INITIALIZE' || body.operation === 'CREATE'){
       query.sql('SELECT count(*) FROM versions WHERE resource = ').param(body.resource);
       $u.executeSQL(database, query).then(function(data){
         database.done();
@@ -74,7 +74,7 @@ module.exports = {
             statusCode: 409,
             body: {
               code: 'initialize.first',
-              message: 'There are already versions of this resource. You can not initialize them.'
+              message: 'There are already versions of this resource. You can not initialize or create them.'
             }
           });
         }else{
