@@ -92,8 +92,8 @@ module.exports = {
 
     sri4node.configure(app, pg, {
       logrequests: true,
-      logsql: false,
-      logdebug: false,
+      logsql: true,
+      logdebug: true,
       authenticate: config.authenticate,
       identify: config.identify,
       defaultdatabaseurl: config.databaseUrl,
@@ -110,7 +110,6 @@ module.exports = {
             'PUT'
           ],
           public: false,
-          secure: [security.checkAccessOnResource],
           schema: {
             $schema: 'http://json-schema.org/schema#',
             title: 'A regular resource that contains a specific version of a resource in the API.',
@@ -158,7 +157,7 @@ module.exports = {
             resource: {},
             document: {oninsert: versions.mapInsertDocument}
           },
-          afterread: [security.doSecurityCheckGet, versions.addPrevAndNextLinksToJson],
+          afterread: [security.doSecurityCheckGet],
           afterupdate: [versions.onlyAllowInsertNoUpdate],
           afterinsert: [security.doSecurityCheckPut, broadcast],
           afterdelete: []
@@ -253,7 +252,7 @@ module.exports = {
     app.use('/test', config.express.static(__dirname + '/test/test.html'));
 
     io.sockets.on('connection', function (socket) {
-      console.log('[audit/broadcast - socket] Received Connection: ' + socket);
+      console.log('[audit/broadcast - socket] Received Connection: ' + JSON.stringify(socket));
       socket.on('join', function (roomName) {
         console.log('[audit/broadcast - socket] Joining Room: ' + roomName);
         socket.join(roomName);

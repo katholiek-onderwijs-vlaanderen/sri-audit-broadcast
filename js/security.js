@@ -50,6 +50,7 @@ function consultSecurityApi (me, deferred, resourceList, ability) {
             }
           }
           if (failed.length === 0) {
+            console.log('[audit/broadcast - security] Security request(s) all allowed');
             deferred.resolve();
           } else {
             console.log('[audit/broadcast - security] Security request(s) not allowed:' + JSON.stringify(failed));
@@ -71,13 +72,14 @@ module.exports = function (passedConfig) {
   config = passedConfig;
   return {
     checkAccessOnResource: function (req, resp, db, me) {
-      console.log("check access on resource");
       var deferred = Q.defer();
       // Only GET requests with specific resource specified can be checked in pre-process secure function,
       // others can only be checked in post-processing.
       if (req.query.resource) {
+        console.log("[audit/broadcast - security] check access on resource(s) - " + req.query.resource);
         consultSecurityApi(me, deferred, req.query.resource.split(','), 'read');
       } else if (req.query.resources) {
+        console.log("[audit/broadcast - security] check access on resource(s) - " + JSON.stringify(req.query.resource));
         consultSecurityApi(me, deferred, req.query.resources.split(','), 'read');
       } else {
         deferred.resolve();
