@@ -10,7 +10,6 @@ function consultSecurityApi (me, deferred, resourceList, ability) {
   if (!config.security.enabled){
     deferred.resolve();
   }else{
-    console.log('security check');
     var batchSecurity = [];
     var failed, j;
 
@@ -25,8 +24,6 @@ function consultSecurityApi (me, deferred, resourceList, ability) {
       });
     });
 
-    console.log('batchSecurity:' + batchSecurity);
-
     var reqOptions = {needle: {json: true}};
     if(config.security.username && config.security.password) {
       reqOptions.needle.username = config.security.username;
@@ -36,15 +33,17 @@ function consultSecurityApi (me, deferred, resourceList, ability) {
       reqOptions.needle.headers = config.security.headers
     }
 
+    console.log('[audit/broadcast - security] security check - ' + JSON.stringify(batchSecurity));
+
     needleRetry.request('PUT', config.security.host + '/security/query/batch', batchSecurity, reqOptions, function (err, response) {
       if (err) {
-        console.log('security error : ' + err);
-        console.log('security error response: ' + response);
+        console.log('[audit/broadcast - security] security error - ' + JSON.stringify(err));
+        console.warn('[audit/broadcast - security] security error response - ' + JSON.stringify(response));
         deferred.reject(err);
       } else {
         failed = [];
         if (response.statusCode === 200) {
-          console.log('BODY: ' + response.body);
+          console.log('[audit/broadcast - security] security return - ' + JSON.stringify(response.body));
           for (j = 0; j < response.body.length; j ++) {
             if (response.body[j].status !== 200 || ! response.body[j].body) {
               failed.push(response.body[j].href);
@@ -53,14 +52,14 @@ function consultSecurityApi (me, deferred, resourceList, ability) {
           if (failed.length === 0) {
             deferred.resolve();
           } else {
-            console.log('Security request(s) not allowed:' + failed);
+            console.log('[audit/broadcast - security] Security request(s) not allowed:' + JSON.stringify(failed));
             deferred.reject({
               statusCode: 403,
               body: {}
             });
           }
         } else {
-          console.log('Received status ' + response.statusCode + ' -> reject.');
+          console.log('[audit/broadcast - security] Received status ' + response.statusCode + ' -> reject.');
           deferred.reject();
         }
       }

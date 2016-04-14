@@ -17,7 +17,7 @@ module.exports = {
 
     //Check configuration
     var configParamNotSet = function (param){
-      console.error(param + ' parameter is not set. Check your configuration!');
+      console.error('[audit/broadcast - configuration]' + param + ' parameter is not set. Check your configuration!');
       process.exit();
     };
 
@@ -34,12 +34,12 @@ module.exports = {
     }else{
       if(!config.security.component){ configParamNotSet('security.component')  }
       if(typeof config.security.component != 'function'){
-        console.error('security.component has to be a function!');
+        console.error('[audit/broadcast - configuration] security.component has to be a function!');
         process.exit();
       }
       if(!config.security.currentPersonHref){ configParamNotSet('security.currentPersonHref')  }
       if(typeof config.security.currentPersonHref != 'function'){
-        console.error('security.currentPersonHref has to be a function!');
+        console.error('[audit/broadcast - configuration] security.currentPersonHref has to be a function!');
         process.exit();
       }
     }
@@ -253,13 +253,13 @@ module.exports = {
     app.use('/test', config.express.static(__dirname + '/test/test.html'));
 
     io.sockets.on('connection', function (socket) {
-      console.log('\n\n *** RECEIVED CONNECTION: ' + socket + ' ***\n\n');
+      console.log('[audit/broadcast - socket] Received Connection: ' + socket);
       socket.on('join', function (roomName) {
-        console.log('*** JOINING ROOM: ' + roomName + ' ***');
+        console.log('[audit/broadcast - socket] Joining Room: ' + roomName);
         socket.join(roomName);
       });
       socket.on('leave', function (roomName) {
-        console.log('*** LEAVING ROOM: ' + roomName + ' ***');
+        console.log('[audit/broadcast - socket] Leaving Room: ' + roomName);
         socket.leave(roomName);
       });
     });

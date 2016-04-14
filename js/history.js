@@ -14,8 +14,6 @@ function parsePermalink (permalink) {
   var ret, key, splitted;
   // TODO: check on only  letters in type en only hex in key !
   ret = {};
-  console.log(permalink);
-  console.log(typeof permalink);
   if (typeof permalink === 'string') {
     splitted = permalink.split('/');
     if (splitted.length === 3) {
@@ -94,7 +92,6 @@ module.exports = {
       }else{
         req.query.limit = 31;
       }
-      console.log(req.query.limit);
       next();
     }
   },

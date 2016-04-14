@@ -56,20 +56,21 @@ module.exports = {
     }));
   },
   mapInsertDocument: function (key, element) {
-    console.log("removing $$");
     removeDollarDollarFieldsFromJSON(element);
     return element;
   },
   notSameVersion: function (body, database) {
     var d = Q.defer();
-    console.log("validation");
+    console.log("[audit/broadcast - version] starting validation");
     var query = $u.prepareSQL();
     if(body.operation === 'INITIALIZE' || body.operation === 'CREATE'){
+      console.log("[audit/broadcast - version] Checking if already version");
       query.sql('SELECT count(*) FROM versions WHERE resource = ').param(body.resource);
       $u.executeSQL(database, query).then(function(data){
         database.done();
         console.log(data);
         if (data.rows[0].count > 0) {
+          console.log("[audit/broadcast - version] There are already versions of this resource. You can not initialize or create them");
           d.reject({
             statusCode: 409,
             body: {
@@ -82,12 +83,14 @@ module.exports = {
         }
       });
     }else{
+      console.log("[audit/broadcast - version] Checking if same version");
       query.sql('SELECT * FROM versions WHERE resource = ').param(body.resource).sql(' ORDER BY timestamp desc');
       $u.executeSQL(database, query).then(function(data){
         removeDollarDollarFieldsFromJSON(body.document);
-        //database.done();
+        database.done();
         console.log(body.document);
         if(JSON.stringify(data.rows[0].document) == JSON.stringify(body.document)){
+          console.log("[audit/broadcast - version] This version is the same as the previous");
           d.reject({
             statusCode: 409,
             body: {
