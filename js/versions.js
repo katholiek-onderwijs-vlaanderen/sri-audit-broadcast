@@ -64,6 +64,8 @@ module.exports = {
     return element;
   },
   notSameVersion: function (body, database) {
+    console.log('[audit/broadcast - version] PUT version was:' + JSON.stringify(body));
+
     var d = Q.defer();
     console.log("[audit/broadcast - version] starting validation");
     var query = $u.prepareSQL("validation");
@@ -71,7 +73,6 @@ module.exports = {
       console.log("[audit/broadcast - version] Checking if already version");
       query.sql('SELECT count(*) FROM versions WHERE resource = ').param(body.resource);
       $u.executeSQL(database, query).then(function(data){
-        console.log(data);
         if (data.rows[0].count > 0) {
           console.log("[audit/broadcast - version] There are already versions of this resource. You can not initialize or create them");
           d.reject({
@@ -93,7 +94,6 @@ module.exports = {
       query.sql('SELECT * FROM versions WHERE resource = ').param(body.resource).sql(' ORDER BY timestamp desc');
       $u.executeSQL(database, query).then(function(data){
         removeDollarDollarFieldsFromJSON(body.document);
-        console.log(body.document);
         if(JSON.stringify(data.rows[0].document) == JSON.stringify(body.document)){
           console.log("[audit/broadcast - version] This version is the same as the previous");
           d.reject({
