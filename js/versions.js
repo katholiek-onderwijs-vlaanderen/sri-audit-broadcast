@@ -88,7 +88,7 @@ module.exports = {
         console.log(err);
         d.reject(err);
       });
-    }else{
+    }else if(body.operation === 'UPDATE'){
       console.log("[audit/broadcast - version] Checking if same version");
       query.sql('SELECT * FROM versions WHERE resource = ').param(body.resource).sql(' ORDER BY timestamp desc');
       $u.executeSQL(database, query).then(function(data){
