@@ -144,6 +144,22 @@ module.exports = {
             ]
           },
           validate: [versions.notSameVersion],
+          validateDocs: {
+            initializeFirst: {
+              description: "On INITIALIZE check if there is already a version of this resource.",
+              errors: [{
+                code: 'initialize.first',
+                description: 'There are already versions of this resource. You can not initialize or create them.'
+              }]
+            },
+            notSameVersion: {
+              description: "On UPDATE check if the putted resource has the same document as the previous version of this resource.",
+              errors: [{
+                code: 'same.version',
+                description: 'This version is the same as the previous.'
+              }]
+            }
+          },
           query: {
             defaultFilter: $q.defaultFilter
           },
@@ -200,6 +216,11 @@ module.exports = {
             tokey: history.orderFilter('to'),
             resources: history.resourcesFilter,
             defaultFilter: $q.defaultFilter
+          },
+          queryDocs: {
+            from: '',
+            tokey: '',
+            resources: '',
           },
           map: {
             key: {},

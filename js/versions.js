@@ -23,6 +23,33 @@ function removeDollarDollarFieldsFromJSON (json) {
   }
 };
 
+function removePersonContactDetailsFromJSON (json) {
+  if (json instanceof Array) {
+    json.forEach(function (e) {
+      removePersonContactDetailsFromJSON(e);
+    });
+  } else if (json instanceof Object) {
+    Object.keys(json).forEach(function (key) {
+      if (json[key] instanceof Object) {
+        removePersonContactDetailsFromJSON(json[key]);
+      }
+      if (key === 'emailAddresses' | key === 'addresses' | key === 'phones' | key === 'bankAccounts') {
+        delete json[key];
+      }
+    });
+  }
+};
+
+function calcType(json){
+  console.log(json.type);
+  if(json.type){
+    return json.type;
+  }else {
+    return null;
+  }
+
+}
+
 module.exports = {
   onlyAllowInsertNoUpdate: function () {
     var deferred = Q.defer();
@@ -60,6 +87,9 @@ module.exports = {
 
   },
   mapInsertDocument: function (key, element) {
+    if(calcType(element) == 'PERSON'){
+      removePersonContactDetailsFromJSON(element);
+    }
     removeDollarDollarFieldsFromJSON(element);
     return element;
   },
@@ -69,7 +99,7 @@ module.exports = {
     var d = Q.defer();
     console.log("[audit/broadcast - version] starting validation");
     var query = $u.prepareSQL("validation");
-    if(body.operation === 'INITIALIZE' || body.operation === 'CREATE'){
+    if(body.operation === 'INITIALIZE'){
       console.log("[audit/broadcast - version] Checking if already version");
       query.sql('SELECT count(*) FROM versions WHERE resource = ').param(body.resource);
       $u.executeSQL(database, query).then(function(data){
@@ -93,7 +123,7 @@ module.exports = {
       console.log("[audit/broadcast - version] Checking if same version");
       query.sql('SELECT * FROM versions WHERE resource = ').param(body.resource).sql(' ORDER BY timestamp desc');
       $u.executeSQL(database, query).then(function(data){
-        removeDollarDollarFieldsFromJSON(body.document);
+        removeDollarDollarFieldsFromJSON(JSON.parse(JSON.stringify(body.document)));
         if(JSON.stringify(data.rows[0].document) == JSON.stringify(body.document)){
           console.log("[audit/broadcast - version] This version is the same as the previous");
           d.reject({
