@@ -273,7 +273,7 @@ module.exports = {
     app.use('/test', config.express.static(__dirname + '/test/test.html'));
 
     io.sockets.on('connection', function (socket) {
-      console.log('[audit/broadcast - socket] Received Connection: ' + JSON.stringify(socket));
+      console.log('[audit/broadcast - socket] Received Connection');
       socket.on('join', function (roomName) {
         console.log('[audit/broadcast - socket] Joining Room: ' + roomName);
         socket.join(roomName);
