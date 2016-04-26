@@ -60,7 +60,7 @@ module.exports = {
         row.from = '/versions/' + fromVersion.key;
       }
       row.to = '/versions/' + row.key;
-      if (row.operation !== 'INITIALIZE') {
+      if (row.operation === 'UPDATE' ) {
         row.patch = jiff.diff(fromVersion ? fromVersion.document : null, row.document);
       }
 

@@ -23,25 +23,30 @@ function removeDollarDollarFieldsFromJSON (json) {
   }
 };
 
-function removePersonContactDetailsFromJSON (json) {
-  if (json instanceof Array) {
-    json.forEach(function (e) {
-      removePersonContactDetailsFromJSON(e);
-    });
-  } else if (json instanceof Object) {
-    Object.keys(json).forEach(function (key) {
-      if (json[key] instanceof Object) {
-        removePersonContactDetailsFromJSON(json[key]);
-      }
-      if (key === 'emailAddresses' | key === 'addresses' | key === 'phones' | key === 'bankAccounts') {
-        delete json[key];
-      }
-    });
+function removePersonContactDetailsFromJSON (type, json) {
+  console.log('[audit/broadcast - version] putted type: ' + type);
+  if(type === 'PERSON') {
+    doRemoval(type, json);
+  }
+  function doRemoval(type, json){
+    if (json instanceof Array) {
+      json.forEach(function (e) {
+        doRemoval(type, e);
+      });
+    } else if (json instanceof Object) {
+      Object.keys(json).forEach(function (key) {
+        if (json[key] instanceof Object) {
+          doRemoval(type, json[key]);
+        }
+        if (key === 'emailAddresses' | key === 'addresses' | key === 'phones' | key === 'bankAccounts') {
+          delete json[key];
+        }
+      });
+    }
   }
 };
 
 function calcType(json){
-  console.log(json.type);
   if(json.type){
     return json.type;
   }else {
@@ -87,9 +92,7 @@ module.exports = {
 
   },
   mapInsertDocument: function (key, element) {
-    if(calcType(element) == 'PERSON'){
-      removePersonContactDetailsFromJSON(element);
-    }
+    removePersonContactDetailsFromJSON(calcType(element), element);
     removeDollarDollarFieldsFromJSON(element);
     return element;
   },
@@ -97,14 +100,14 @@ module.exports = {
     console.log('[audit/broadcast - version] PUT version was:' + JSON.stringify(body));
 
     var d = Q.defer();
-    console.log("[audit/broadcast - version] starting validation");
+    console.log("[audit/broadcast - version validation] starting validation");
     var query = $u.prepareSQL("validation");
     if(body.operation === 'INITIALIZE'){
-      console.log("[audit/broadcast - version] Checking if already version");
+      console.log("[audit/broadcast - version validation] Checking if already version");
       query.sql('SELECT count(*) FROM versions WHERE resource = ').param(body.resource);
-      $u.executeSQL(database, query).then(function(data){
+      $u.executeSQL(database, query, false, false).then(function(data){
         if (data.rows[0].count > 0) {
-          console.log("[audit/broadcast - version] There are already versions of this resource. You can not initialize or create them");
+          console.log("[audit/broadcast - version validation] There are already versions of this resource. You can not initialize or create them");
           d.reject({
             statusCode: 409,
             body: {
@@ -113,35 +116,44 @@ module.exports = {
             }
           });
         }else{
+          console.log("[audit/broadcast - version validation] DONE - initialize.first");
           d.resolve();
         }
-      }).catch(function (err) {
-        console.log(err);
-        d.reject(err);
+      }, function (err) {
+        //Should not not put if database fails.. we want the versions
+        console.warn({error: 'database.error.validation.', message: err});
+        d.resolve();
       });
     }else if(body.operation === 'UPDATE'){
-      console.log("[audit/broadcast - version] Checking if same version");
-      query.sql('SELECT * FROM versions WHERE resource = ').param(body.resource).sql(' ORDER BY timestamp desc');
-      $u.executeSQL(database, query).then(function(data){
-        removeDollarDollarFieldsFromJSON(JSON.parse(JSON.stringify(body.document)));
-        if(JSON.stringify(data.rows[0].document) == JSON.stringify(body.document)){
-          console.log("[audit/broadcast - version] This version is the same as the previous");
-          d.reject({
-            statusCode: 409,
-            body: {
-              code: 'same.version',
-              message: 'This version is the same as the previous.'
-            }
-          });
-        }else{
-          console.log("Validation DONE");
+      console.log("[audit/broadcast - version validation] Checking if same version");
+      query.sql('SELECT * FROM versions WHERE resource = ').param(body.resource).sql(' ORDER BY timestamp desc LIMIT 1');
+      $u.executeSQL(database, query, false, false)
+        .then(function(data){
+          removePersonContactDetailsFromJSON(body.type, body.document);
+          removeDollarDollarFieldsFromJSON(body.document);
+          if(JSON.stringify(data.rows[0].document) == JSON.stringify(body.document)){
+            console.log("[audit/broadcast - version validation] This version is the same as the previous");
+            d.reject({
+              statusCode: 409,
+              body: {
+                code: 'same.version',
+                message: 'This version is the same as the previous.'
+              }
+            });
+          }else{
+            console.log("[audit/broadcast - version validation] DONE - same.version");
+            d.resolve();e
+          }
+        }, function (err) {
+          //Should not not put if database fails.. we want the versions
+          console.warn({error: 'database.error.validation.', message: err});
           d.resolve();
         }
-      }).catch(function (err) {
-        console.log(err);
-        d.reject(err);
-      });
+      );
+    } else {
+      d.resolve();
     }
+    console.log("[audit/broadcast - version validation] ALL DONE");
     return d.promise;
   }
 };
