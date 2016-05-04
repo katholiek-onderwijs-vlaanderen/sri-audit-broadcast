@@ -127,7 +127,7 @@ module.exports = {
         }
       ).catch(function (err) {
           console.warn('[audit/broadcast - version validation - database] Sending internal server error 500 to client');
-          db.done(err);
+          database.done(err);
           d.reject(err);
         }
       );
@@ -158,7 +158,7 @@ module.exports = {
         }
       ).catch(function (err) {
           console.warn('[audit/broadcast - version validation - database] Sending internal server error 500 to client');
-          db.done(err);
+          database.done(err);
           d.reject(err);
         }
       );
