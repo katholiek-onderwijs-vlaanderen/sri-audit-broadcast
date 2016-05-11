@@ -24,7 +24,6 @@ function removeDollarDollarFieldsFromJSON (json) {
 };
 
 function removePersonContactDetailsFromJSON (type, json) {
-  console.log('[audit/broadcast - version] putted type: ' + type);
   if(type === 'PERSON') {
     doRemoval(type, json);
   }
@@ -97,75 +96,59 @@ module.exports = {
     return element;
   },
   notSameVersion: function (body, database) {
-    console.log('[audit/broadcast - version] PUT version was:' + JSON.stringify(body));
+    console.log('[audit/broadcast - version - /versions/' + body.key +'] PUT version was:' + JSON.stringify(body));
 
     var d = Q.defer();
-    console.log("[audit/broadcast - version validation] starting validation");
     var query = $u.prepareSQL("validation");
     if(body.operation === 'INITIALIZE'){
-      console.log("[audit/broadcast - version validation] Checking if already version");
       query.sql('SELECT count(*) FROM versions WHERE resource = ').param(body.resource);
       $u.executeSQL(database, query, false, false)
         .then(function(data){
           if (data.rows[0].count > 0) {
-            console.log("[audit/broadcast - version validation] There are already versions of this resource. You can not initialize or create them");
             d.reject({
               statusCode: 409,
               body: {
                 code: 'initialize.first',
+                version: '/versions/' + body.key,
                 message: 'There are already versions of this resource. You can not initialize or create them.'
               }
             });
           }else{
-            console.log("[audit/broadcast - version validation] DONE - initialize.first");
             d.resolve();
           }
         }, function (err) {
-          //Should not not put if database fails.. we want the versions
-          console.warn({error: 'database.error.validation.', message: err});
+          //Should not not rollback if database fails.. we want the versions
+          console.warn({error: 'database.error.validation.', version: '/versions/' + body.key, message: err});
           d.resolve();
-        }
-      ).catch(function (err) {
-          console.warn('[audit/broadcast - version validation - database] Sending internal server error 500 to client');
-          database.done(err);
-          d.reject(err);
         }
       );
     }else if(body.operation === 'UPDATE'){
-      console.log("[audit/broadcast - version validation] Checking if same version");
       query.sql('SELECT * FROM versions WHERE resource = ').param(body.resource).sql(' ORDER BY timestamp desc LIMIT 1');
       $u.executeSQL(database, query, false, false)
         .then(function(data){
           removePersonContactDetailsFromJSON(body.type, body.document);
           removeDollarDollarFieldsFromJSON(body.document);
           if(JSON.stringify(data.rows[0].document) == JSON.stringify(body.document)){
-            console.log("[audit/broadcast - version validation] This version is the same as the previous");
             d.reject({
               statusCode: 409,
               body: {
                 code: 'same.version',
+                version: '/versions/' + body.key,
                 message: 'This version is the same as the previous.'
               }
             });
           }else{
-            console.log("[audit/broadcast - version validation] DONE - same.version");
-            d.resolve();e
+            d.resolve();
           }
         }, function (err) {
-          //Should not not put if database fails.. we want the versions
-          console.warn({error: 'database.error.validation.', message: err});
+          //Should not not rollback if database fails.. we want the versions
+          console.warn({error: 'database.error.validation.', version: '/versions/' + body.key, message: err});
           d.resolve();
-        }
-      ).catch(function (err) {
-          console.warn('[audit/broadcast - version validation - database] Sending internal server error 500 to client');
-          database.done(err);
-          d.reject(err);
         }
       );
     } else {
       d.resolve();
     }
-    console.log("[audit/broadcast - version validation] ALL DONE");
     return d.promise;
   }
 };
