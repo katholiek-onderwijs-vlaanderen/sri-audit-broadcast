@@ -92,8 +92,8 @@ module.exports = {
 
     sri4node.configure(app, pg, {
       logrequests: true,
-      logsql: false,
-      logdebug: false,
+      logsql: true,
+      logdebug: true,
       authenticate: config.authenticate,
       identify: config.identify,
       defaultdatabaseurl: config.databaseUrl,

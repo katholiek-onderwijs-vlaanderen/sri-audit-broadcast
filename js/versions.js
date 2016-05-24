@@ -5,6 +5,7 @@
 var Q = require('q');
 var sri4node = require('sri4node');
 var $u = sri4node.utils;
+var _ = require('lodash');
 
 function removeDollarDollarFieldsFromJSON (json) {
   if (json instanceof Array) {
@@ -37,7 +38,7 @@ function removePersonContactDetailsFromJSON (type, json) {
         if (json[key] instanceof Object) {
           doRemoval(type, json[key]);
         }
-        if (key === 'emailAddresses' | key === 'addresses' | key === 'phones' | key === 'bankAccounts') {
+        if (key === 'emailAddresses' || key === 'addresses' || key === 'phones' || key === 'bankAccounts' || key === 'mergedPerson') {
           delete json[key];
         }
       });
@@ -128,7 +129,8 @@ module.exports = {
         .then(function(data){
           removePersonContactDetailsFromJSON(body.type, body.document);
           removeDollarDollarFieldsFromJSON(body.document);
-          if(JSON.stringify(data.rows[0].document) == JSON.stringify(body.document)){
+          console.log(data);
+          if(data.rowCount > 0 && _.isEqual(data.rows[0].document, body.document)){
             d.reject({
               statusCode: 409,
               body: {
