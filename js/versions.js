@@ -38,7 +38,8 @@ function removePersonContactDetailsFromJSON (type, json) {
         if (json[key] instanceof Object) {
           doRemoval(type, json[key]);
         }
-        if (key === 'emailAddresses' || key === 'addresses' || key === 'phones' || key === 'bankAccounts' || key === 'mergedPerson') {
+        //Should also add mergedPersons in the future
+        if (key === 'emailAddresses' || key === 'addresses' || key === 'phones' || key === 'bankAccounts') {
           delete json[key];
         }
       });
