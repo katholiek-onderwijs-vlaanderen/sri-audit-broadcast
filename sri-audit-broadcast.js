@@ -92,7 +92,7 @@ module.exports = {
 
     sri4node.configure(app, pg, {
       logrequests: true,
-      logsql: true,
+      logsql: false,
       logdebug: true,
       authenticate: config.authenticate,
       identify: config.identify,
@@ -135,7 +135,6 @@ module.exports = {
             required: [
               'key',
               'timestamp',
-              'person',
               'component',
               'operation',
               'type',
