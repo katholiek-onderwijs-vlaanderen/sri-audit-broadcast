@@ -33,8 +33,6 @@ function consultSecurityApi (me, deferred, resourceList, ability) {
         reqOptions.needle.headers = config.security.headers
       }
 
-      console.log('[audit/broadcast - security] security check - ' + JSON.stringify(batchSecurity));
-
       needleRetry.request('PUT', config.security.host + '/security/query/batch', batchSecurity, reqOptions, function (err, response) {
         if (err) {
           console.log('[audit/broadcast - security] security error - ' + JSON.stringify(err));
@@ -43,7 +41,6 @@ function consultSecurityApi (me, deferred, resourceList, ability) {
         } else {
           failed = [];
           if (response.statusCode === 200) {
-            console.log('[audit/broadcast - security] security return - ' + JSON.stringify(response.body));
             for (j = 0; j < response.body.length; j ++) {
               if (response.body[j].status !== 200 || ! response.body[j].body) {
                 failed.push(response.body[j].href);
@@ -86,7 +83,7 @@ module.exports = function (passedConfig) {
         console.log("[audit/broadcast - security] check access on resource(s) - " + req.query.resource);
         consultSecurityApi(me, deferred, req.query.resource.split(','), 'read');
       } else if (req.query.resources) {
-        console.log("[audit/broadcast - security] check access on resource(s) - " + JSON.stringify(req.query.resource));
+        console.log("[audit/broadcast - security] check access on resource(s) - " + req.query.resources);
         consultSecurityApi(me, deferred, req.query.resources.split(','), 'read');
       } else {
         deferred.resolve();

@@ -135,6 +135,7 @@ module.exports = {
             required: [
               'key',
               'timestamp',
+              'person',
               'component',
               'operation',
               'type',
