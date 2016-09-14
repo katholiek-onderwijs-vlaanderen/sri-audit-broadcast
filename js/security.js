@@ -43,7 +43,7 @@ function consultSecurityApi (me, deferred, resourceList, ability) {
           if (response.statusCode === 200) {
             for (j = 0; j < response.body.length; j ++) {
               if (response.body[j].status !== 200 || ! response.body[j].body) {
-                failed.push(response.body[j].href);
+                failed.push(response.body[j]);
               }
             }
             if (failed.length === 0) {

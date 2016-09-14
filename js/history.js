@@ -1,5 +1,5 @@
 /**
- * Created by guntherclaes on 04/04/16. test
+ * Created by guntherclaes on 04/04/16.
  */
 
 var jiff = require('jiff');
