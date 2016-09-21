@@ -36,7 +36,7 @@ function consultSecurityApi (me, deferred, resourceList, ability) {
       needleRetry.request('PUT', config.security.host + '/security/query/batch', batchSecurity, reqOptions, function (err, response) {
         if (err) {
           console.log('[audit/broadcast - security] security error - ' + JSON.stringify(err));
-          console.warn('[audit/broadcast - security] security error response - ' + JSON.stringify(response));
+          console.warn('[audit/broadcast - security] security error response - ' + JSON.stringify(response.body));
           deferred.reject(err);
         } else {
           failed = [];
