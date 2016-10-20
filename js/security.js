@@ -35,7 +35,7 @@ function consultSecurityApi (me, deferred, resourceList, ability) {
 
       needleRetry.request('PUT', config.security.host + '/security/query/batch', batchSecurity, reqOptions, function (err, response) {
         if (err) {
-          console.log('[audit/broadcast - security] security error - ' + JSON.stringify(err));
+          console.log('[audit/broadcast - security] security error - ' +  config.security.host + '/security/query/batch - ' + JSON.stringify(err));
           deferred.reject(err);
         } else {
           failed = [];
@@ -60,9 +60,9 @@ function consultSecurityApi (me, deferred, resourceList, ability) {
             }
           } else {
             if(response.body){
-              console.warn('[audit/broadcast - security] Security error response - ' + response.statusCode + ' -> ' + JSON.stringify(response.body));
+              console.warn('[audit/broadcast - security] Security error response ' +  config.security.host + '/security/query/batch - ' + response.statusCode + ' -> ' + JSON.stringify(response.body));
             } else {
-              console.log('[audit/broadcast - security] Received status ' + response.statusCode);
+              console.log('[audit/broadcast - security] Received status ' +  config.security.host + '/security/query/batch - ' + response.statusCode);
             }
             deferred.reject();
           }
