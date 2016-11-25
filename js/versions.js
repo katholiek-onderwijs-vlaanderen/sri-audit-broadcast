@@ -6,6 +6,7 @@ var Q = require('q');
 var sri4node = require('sri4node');
 var $u = sri4node.utils;
 var _ = require('lodash');
+var jiff = require('jiff');
 
 function removeDollarDollarFieldsFromJSON (json) {
   if (json instanceof Array) {
@@ -57,14 +58,29 @@ function calcType(json){
 }
 
 module.exports = {
-  onlyAllowInsertNoUpdate: function () {
+  onlyAllowInsertNoUpdate: function (elm, database) {
     var deferred = Q.defer();
-    deferred.reject({
-      statusCode: 409,
-      body: {
-        code: 'existing.version.cannot.be.updated',
-        message: 'Existing versions cannot be updated. A new version should be created.'
-      }
+    var query = $u.prepareSQL("validationUpdate");
+    query.sql('SELECT * FROM versions WHERE key = ').param(elm.key);
+    $u.executeSQL(database, query)
+      .then(function(data){
+        if (data.rows.length > 0 && jiff.diff(data.rows[0].document, elm.document).length != 0) {
+              deferred.reject({
+                statusCode: 409,
+                body: {
+                  code: 'existing.version.cannot.be.updated',
+                  message: 'Existing versions cannot be updated. A new version should be created.'
+                }
+              });
+          }else{
+            deferred.resolve();
+          }
+        }, function (err) {
+          console.warn({error: 'database.error.validation.', version: '/versions/' + elm.key, message: err});
+          deferred.reject();
+        }
+      ).catch(function (ex) {
+        console.error(ex.stack);
     });
     return deferred.promise;
   },
@@ -76,7 +92,6 @@ module.exports = {
       var query = $u.prepareSQL('key');
       query.sql('select next, previous from versions_previous_next_view where key = ').param(element.key);
       $u.executeSQL(database, query).then(function (result) {
-        console.log(result);
         if (result.rows[0].next && result.rows[0].next !== element.key) {
           element.$$meta.next = '/versions/' + result.rows[0].next;
         }
@@ -98,7 +113,7 @@ module.exports = {
     return element;
   },
   notSameVersion: function (body, database) {
-    console.log('[audit/broadcast - version - /versions/' + body.key +'] PUT version was:' + JSON.stringify(body));
+    //console.log('[audit/broadcast - version - /versions/' + body.key +'] PUT version was:' + JSON.stringify(body));
 
     var d = Q.defer();
     var query = $u.prepareSQL("validation");
@@ -125,12 +140,11 @@ module.exports = {
         }
       );
     }else if(body.operation === 'UPDATE'){
-      query.sql('SELECT * FROM versions WHERE resource = ').param(body.resource).sql(' ORDER BY timestamp desc LIMIT 1');
+      query.sql('SELECT * FROM versions WHERE key != ').param(body.key).sql(' AND resource = ').param(body.resource).sql(' ORDER BY timestamp desc LIMIT 1');
       $u.executeSQL(database, query, false, false)
         .then(function(data){
           removePersonContactDetailsFromJSON(body.type, body.document);
           removeDollarDollarFieldsFromJSON(body.document);
-          console.log(data);
           if(data.rowCount > 0 && _.isEqual(data.rows[0].document, body.document)){
             d.reject({
               statusCode: 409,

@@ -91,7 +91,7 @@ module.exports = {
     app.get('/history', history.setFixedOrderForHistoryAndCheckSomeCustomPrerequisites);
 
     sri4node.configure(app, pg, {
-      logrequests: true,
+      logrequests: false,
       logsql: false,
       logdebug: false,
       authenticate: config.authenticate,
@@ -143,7 +143,7 @@ module.exports = {
               'document'
             ]
           },
-          validate: [versions.notSameVersion],
+          validate: [versions.onlyAllowInsertNoUpdate, versions.notSameVersion],
           validateDocs: {
             initializeFirst: {
               description: "On INITIALIZE check if there is already a version of this resource.",
@@ -174,7 +174,7 @@ module.exports = {
             document: {oninsert: versions.mapInsertDocument}
           },
           afterread: [security.doSecurityCheckGet],
-          afterupdate: [versions.onlyAllowInsertNoUpdate],
+          afterupdate: [],
           afterinsert: [security.doSecurityCheckPut, broadcast],
           afterdelete: []
         },
@@ -220,7 +220,7 @@ module.exports = {
           queryDocs: {
             from: '',
             tokey: '',
-            resources: '',
+            resources: ''
           },
           map: {
             key: {},
