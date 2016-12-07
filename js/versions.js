@@ -145,7 +145,7 @@ module.exports = {
         .then(function(data){
           removePersonContactDetailsFromJSON(body.type, body.document);
           removeDollarDollarFieldsFromJSON(body.document);
-          if(data.rowCount > 0 && _.isEqual(data.rows[0].document, body.document)){
+          if(data.rowCount > 0 && _.isEqual(data.rows[0].document, body.document) && data.rows[0].key != body.key){
             d.reject({
               statusCode: 409,
               body: {
