@@ -100,11 +100,6 @@ module.exports = {
       resources: [
         {
           type: '/versions',
-          cache: {
-            ttl: 120,
-            type: 'redis',
-            redis: process.env.REDIS_URL
-          },
           methods: [
             'GET',
             'PUT'
