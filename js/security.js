@@ -70,7 +70,7 @@ function consultSecurityApi (me, deferred, resourceList, ability) {
       });
     }
   }catch(e){
-    console.warn(e);
+    console.warn(e.stack);
     deferred.reject();
   }
 };
