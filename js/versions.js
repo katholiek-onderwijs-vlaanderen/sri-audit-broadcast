@@ -64,7 +64,7 @@ module.exports = {
     query.sql('SELECT * FROM versions WHERE key = ').param(elm.key);
     $u.executeSQL(database, query)
       .then(function(data){
-        if (data.rows.length > 0 && jiff.diff(data.rows[0].document, elm.document).length != 0) {
+        if (data.rows.length > 0 && !_.isEqual(data.rows[0].document, elm.document)) {
               deferred.reject({
                 statusCode: 409,
                 body: {
