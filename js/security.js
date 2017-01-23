@@ -12,16 +12,20 @@ function consultSecurityApi (me, deferred, resourceList, ability) {
     } else {
       var batchSecurity = [];
       var failed, j;
-
       resourceList.forEach(function (resource) {
-        var securityUrl = '/security/query/allowed?ability=' + ability + '&component=' + config.security.component(resource) + '&person=' + config.security.currentPersonHref(me);
-        if (ability !== 'create') {
-          securityUrl = securityUrl + '&resource=' + resource;
+        var component = config.security.component(resource);
+        if (component) {
+          var securityUrl = '/security/query/allowed?ability=' + ability + '&component=' + config.security.component(resource) + '&person=' + config.security.currentPersonHref(me);
+          if (ability !== 'create') {
+            securityUrl = securityUrl + '&resource=' + resource;
+          }
+          batchSecurity.push({
+            href: securityUrl,
+            verb: 'GET'
+          });
+        } else {
+          console.warn('no security component found for: ' + resource)
         }
-        batchSecurity.push({
-          href: securityUrl,
-          verb: 'GET'
-        });
       });
 
       var reqOptions = {needle: {json: true}};
@@ -33,41 +37,45 @@ function consultSecurityApi (me, deferred, resourceList, ability) {
         reqOptions.needle.headers = config.security.headers
       }
 
-      needleRetry.request('PUT', config.security.host + '/security/query/batch', batchSecurity, reqOptions, function (err, response) {
-        if (err) {
-          console.log('[audit/broadcast - security] security error - ' +  config.security.host + '/security/query/batch - ' + JSON.stringify(err));
-          deferred.reject(err);
-        } else {
-          failed = [];
-          if (response.statusCode === 200) {
-            for (j = 0; j < response.body.length; j ++) {
-              if (response.body[j].status !== 200 || ! response.body[j].body) {
-                failed.push(response.body[j]);
-              }
-            }
-            if (failed.length === 0) {
-              console.log('[audit/broadcast - security] Security request(s) all allowed');
-              deferred.resolve();
-            } else {
-              console.log('[audit/broadcast - security] Security request(s) not allowed:' + JSON.stringify(failed));
-              deferred.reject({
-                statusCode: 403,
-                body: {
-                  error: 'not.allowed',
-                  message: 'Not allowed to see one or more requested resources'
-                }
-              });
-            }
+      if(batchSecurity.length > 0) {
+        needleRetry.request('PUT', config.security.host + '/security/query/batch', batchSecurity, reqOptions, function (err, response) {
+          if (err) {
+            console.log('[audit/broadcast - security] security error - ' + config.security.host + '/security/query/batch - ' + JSON.stringify(err));
+            deferred.reject(err);
           } else {
-            if(response.body){
-              console.warn('[audit/broadcast - security] Security error response ' +  config.security.host + '/security/query/batch - ' + response.statusCode + ' -> ' + JSON.stringify(response.body));
+            failed = [];
+            if (response.statusCode === 200) {
+              for (j = 0; j < response.body.length; j ++) {
+                if (response.body[j].status !== 200 || ! response.body[j].body) {
+                  failed.push(response.body[j]);
+                }
+              }
+              if (failed.length === 0) {
+                console.log('[audit/broadcast - security] Security request(s) all allowed');
+                deferred.resolve();
+              } else {
+                console.log('[audit/broadcast - security] Security request(s) not allowed:' + JSON.stringify(failed));
+                deferred.reject({
+                  statusCode: 403,
+                  body: {
+                    error: 'not.allowed',
+                    message: 'Not allowed to see one or more requested resources'
+                  }
+                });
+              }
             } else {
-              console.log('[audit/broadcast - security] Received status ' +  config.security.host + '/security/query/batch - ' + response.statusCode);
+              if (response.body) {
+                console.warn('[audit/broadcast - security] Security error response ' + config.security.host + '/security/query/batch - ' + response.statusCode + ' -> ' + JSON.stringify(response.body));
+              } else {
+                console.log('[audit/broadcast - security] Received status ' + config.security.host + '/security/query/batch - ' + response.statusCode);
+              }
+              deferred.reject();
             }
-            deferred.reject();
           }
-        }
-      });
+        });
+      } else {
+        deferred.resolve();
+      }
     }
   }catch(e){
     console.warn(e.stack);
