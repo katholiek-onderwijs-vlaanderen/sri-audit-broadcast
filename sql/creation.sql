@@ -1,4 +1,4 @@
-CREATE TYPE operation AS ENUM ('CREATE', 'UPDATE', 'DELETE','INITIALIZE');
+CREATE TYPE operation AS ENUM ('CREATE', 'UPDATE', 'DELETE','INITIALIZE', 'MERGE');
 
 CREATE TABLE versions (
     key            UUID PRIMARY KEY,
@@ -6,7 +6,7 @@ CREATE TABLE versions (
     person         VARCHAR(128) NOT NULL,
     component      VARCHAR(56) NOT NULL,
     operation      operation,
-    type           VARCHAR(16) NOT NULL,
+    type           VARCHAR(60) NOT NULL,
     resource       VARCHAR(128) NOT NULL,
     document       json,
     "$$meta.deleted"   boolean default FALSE,

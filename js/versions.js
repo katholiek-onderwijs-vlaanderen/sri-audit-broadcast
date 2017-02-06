@@ -123,7 +123,7 @@ module.exports = {
       query.sql('SELECT count(*) FROM versions WHERE resource = ').param(body.resource);
       $u.executeSQL(database, query, false, false)
         .then(function(data){
-          if (data.rows[0].count > 0) {
+          if (data.rows[0].count > 0  && !_.isEqual(data.rows[0].document, elm.document)) {
             d.reject({
               statusCode: 409,
               body: {

@@ -118,10 +118,11 @@ module.exports = {
               component: $s.string('A permalink to the /security/component that manages this resource.'),
               operation: {
                 description: 'Opperation that has been performed on the resource',
-                enum: ['CREATE', 'UPDATE', 'DELETE', 'INITIALIZE']
+                enum: ['CREATE', 'UPDATE', 'DELETE', 'INITIALIZE', 'MERGE']
               },
               type: $s.string('The $$meta.type of the original resource.'),
               resource: $s.string('Permalink of the resource'),
+              mergedResource: $s.string('Resouce that the document has merged with'),
               document: {
                 type: 'object',
                 description: 'The full resource as it was in this version, at the given timestamp.'
