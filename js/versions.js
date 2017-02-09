@@ -40,7 +40,7 @@ function removePersonContactDetailsFromJSON (type, json) {
           doRemoval(type, json[key]);
         }
         //Should also add mergedPersons in the future
-        if (key === 'emailAddresses' || key === 'addresses' || key === 'phones' || key === 'bankAccounts') {
+        if (key === 'emailAddresses' || key === 'addresses' || key === 'phones' || key === 'bankAccounts' || key === 'mergedPersons') {
           delete json[key];
         }
       });
