@@ -135,11 +135,10 @@ module.exports = {
               'component',
               'operation',
               'type',
-              'resource',
-              'document'
+              'resource'
             ]
           },
-          validate: [versions.onlyAllowInsertNoUpdate, versions.notSameVersion],
+          validate: [versions.documentNotRequiredOnDelete, versions.onlyAllowInsertNoUpdate, versions.notSameVersion],
           validateDocs: {
             initializeFirst: {
               description: "On INITIALIZE check if there is already a version of this resource.",

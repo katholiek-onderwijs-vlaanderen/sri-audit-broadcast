@@ -169,5 +169,18 @@ module.exports = {
       d.resolve();
     }
     return d.promise;
+  },
+  documentNotRequiredOnDelete: function (body, database) {
+    var d = Q.defer();
+    if (! body.document) {
+      if (['CREATE', 'UPDATE'].indexOf(body.operation) > -1) {
+        d.reject();
+      } else {
+        d.resolve();
+      }
+    } else {
+      d.resolve();
+    }
+    return d.promise;
   }
 };
