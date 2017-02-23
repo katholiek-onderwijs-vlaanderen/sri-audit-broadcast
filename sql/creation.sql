@@ -6,6 +6,7 @@ CREATE TABLE versions (
     person         VARCHAR(128) NOT NULL,
     component      VARCHAR(56) NOT NULL,
     operation      operation,
+		mergedResource text,
     type           VARCHAR(60) NOT NULL,
     resource       VARCHAR(128) NOT NULL,
     document       json,

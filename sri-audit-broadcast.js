@@ -166,6 +166,7 @@ module.exports = {
             operation: {},
             type: {},
             resource: {},
+            mergedResource: {},
             document: {oninsert: versions.mapInsertDocument}
           },
           afterread: [security.doSecurityCheckGet],
