@@ -199,6 +199,7 @@ module.exports = {
               resource: $s.string('Permalink of the resource'),
               from: $s.string('A permalink to the previous version (if existing).'),
               to: $s.string('A permalink to the current version.'),
+              mergedResource: $s.string('Resouce that the document has merged with'),
               patch: {
                 type: 'object',
                 description: 'A JSON patch (rfc6902) between this and previous verion. Only present for UPDATE operations.'
@@ -224,7 +225,8 @@ module.exports = {
             person: {},
             operation: {},
             resource: {},
-            document: {}
+            document: {},
+            mergedResource: {}
           },
           handlelistqueryresult: history.handleHistoryListQueryResult,
           afterread: [],
