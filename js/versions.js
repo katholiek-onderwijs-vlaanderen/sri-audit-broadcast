@@ -123,6 +123,8 @@ module.exports = {
       query.sql('SELECT count(*) FROM versions WHERE resource = ').param(body.resource);
       $u.executeSQL(database, query, false, false)
         .then(function(data){
+          removePersonContactDetailsFromJSON(body.type, body.document);
+          removeDollarDollarFieldsFromJSON(body.document);
           if (data.rows[0].count > 0  && !_.isEqual(data.rows[0].document, body.document)) {
             d.reject({
               statusCode: 409,
