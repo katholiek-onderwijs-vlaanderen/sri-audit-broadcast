@@ -120,12 +120,12 @@ module.exports = {
     var d = Q.defer();
     var query = $u.prepareSQL("validation");
     if(body.operation === 'INITIALIZE'){
-      query.sql('SELECT count(*) FROM versions WHERE resource = ').param(body.resource);
+      query.sql('SELECT * FROM versions WHERE resource = ').param(body.resource);
       $u.executeSQL(database, query, false, false)
         .then(function(data){
           removePersonContactDetailsFromJSON(body.type, body.document);
           removeDollarDollarFieldsFromJSON(body.document);
-          if (data.rows[0].count > 0  && !_.isEqual(data.rows[0].document, body.document)) {
+          if (data.rowCount > 0  && !_.isEqual(data.rows[0].document, body.document)) {
             d.reject({
               statusCode: 409,
               body: {

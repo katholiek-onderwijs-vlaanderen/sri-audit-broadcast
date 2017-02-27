@@ -91,9 +91,9 @@ module.exports = {
     app.get('/history', history.setFixedOrderForHistoryAndCheckSomeCustomPrerequisites);
 
     sri4node.configure(app, pg, {
-      logrequests: false,
-      logsql: false,
-      logdebug: false,
+      logrequests: true,
+      logsql: true,
+      logdebug: true,
       authenticate: config.authenticate,
       identify: config.identify,
       defaultdatabaseurl: config.databaseUrl,
