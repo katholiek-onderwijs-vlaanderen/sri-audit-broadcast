@@ -28,19 +28,27 @@ module.exports = {
     if(!config.authenticate){ configParamNotSet('authenticate')  }
     if(!config.identify){ configParamNotSet('identify')  }
     if(!config.security){ configParamNotSet('security')  }
-    if(!config.security.host){ configParamNotSet('security.host')  }
-    if(typeof config.security.enabled === 'undefined'){
-      configParamNotSet('security.enabled')
-    }else{
-      if(!config.security.component){ configParamNotSet('security.component')  }
-      if(typeof config.security.component != 'function'){
-        console.error('[audit/broadcast - configuration] security.component has to be a function!');
-        process.exit();
+    if(config.security.enabled) {
+      if (!config.security.host) {
+        configParamNotSet('security.host')
       }
-      if(!config.security.currentPersonHref){ configParamNotSet('security.currentPersonHref')  }
-      if(typeof config.security.currentPersonHref != 'function'){
-        console.error('[audit/broadcast - configuration] security.currentPersonHref has to be a function!');
-        process.exit();
+      if (typeof config.security.enabled === 'undefined') {
+        configParamNotSet('security.enabled')
+      } else {
+        if (!config.security.component) {
+          configParamNotSet('security.component')
+        }
+        if (typeof config.security.component != 'function') {
+          console.error('[audit/broadcast - configuration] security.component has to be a function!');
+          process.exit();
+        }
+        if (!config.security.currentPersonHref) {
+          configParamNotSet('security.currentPersonHref')
+        }
+        if (typeof config.security.currentPersonHref != 'function') {
+          console.error('[audit/broadcast - configuration] security.currentPersonHref has to be a function!');
+          process.exit();
+        }
       }
     }
 
@@ -248,11 +256,11 @@ module.exports = {
     }
 
     io.set('store', new RedisStore({
-      redis: redis,
-      redisPub: pub,
-      redisSub: sub,
-      redisClient: client
-    }));
+                                     redis: redis,
+                                     redisPub: pub,
+                                     redisSub: sub,
+                                     redisClient: client
+                                   }));
 
     app.get('/updates', config.authenticate, function (req, res) {
       var forwardProto = req.get('X-Forwarded-Proto');
