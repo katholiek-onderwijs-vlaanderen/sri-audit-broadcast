@@ -132,8 +132,15 @@ module.exports = {
               resource: $s.string('Permalink of the resource'),
               mergedResource: $s.string('Resouce that the document has merged with'),
               document: {
-                type: 'object',
-                description: 'The full resource as it was in this version, at the given timestamp.'
+                oneOf: [
+                  {
+                    type: 'null'
+                  },
+                  {
+                    type: 'object',
+                    description: 'The full resource as it was in this version, at the given timestamp.'
+                  }
+                ]
               }
             },
             required: [
