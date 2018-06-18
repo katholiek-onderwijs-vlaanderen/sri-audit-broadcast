@@ -2,81 +2,65 @@
  * Created by guntherclaes on 01/12/15.
  */
 
-var inflect = require('i')();
+const  inflect = require('i')();
 
-var sri4node = require('sri4node');
-var $u = sri4node.utils;
-var $s = sri4node.schemaUtils;
-var $q = sri4node.queryUtils;
-var url = require('url');
-var Q = require('q');
+const  sri4node = require('sri4node');
+const  $u = sri4node.utils;
+const  $s = sri4node.schemaUtils;
+const  $q = sri4node.queryUtils;
+const  url = require('url');
 
 module.exports = {
 
-  init: function (config) {
+  init: async function (config) {
+
+    const redis_url = process.env.REDIS_URL
+    if (!redis_url || redis_url == '') {
+      console.log('FATAL: no redis url configured!');
+      process.exit(1);
+    }
+
 
     //Check configuration
-    var configParamNotSet = function (param){
+    const  configParamNotSet = function (param){
       console.error('[audit/broadcast - configuration]' + param + ' parameter is not set. Check your configuration!');
       process.exit();
     };
 
     if(!config.app){ configParamNotSet('app')  }
     if(!config.server){ configParamNotSet('server')  }
-    if(!config.pg){ configParamNotSet('pg')  }
     if(!config.express){ configParamNotSet('express')  }
-    if(!config.authenticate){ configParamNotSet('authenticate')  }
-    if(!config.identify){ configParamNotSet('identify')  }
-    if(!config.security){ configParamNotSet('security')  }
-    if(config.security.enabled) {
-      if (!config.security.host) {
-        configParamNotSet('security.host')
-      }
-      if (typeof config.security.enabled === 'undefined') {
-        configParamNotSet('security.enabled')
-      } else {
-        if (!config.security.component) {
-          configParamNotSet('security.component')
-        }
-        if (typeof config.security.component != 'function') {
-          console.error('[audit/broadcast - configuration] security.component has to be a function!');
-          process.exit();
-        }
-        if (!config.security.currentPersonHref) {
-          configParamNotSet('security.currentPersonHref')
-        }
-        if (typeof config.security.currentPersonHref != 'function') {
-          console.error('[audit/broadcast - configuration] security.currentPersonHref has to be a function!');
-          process.exit();
-        }
-      }
-    }
+    // if(!config.oauthValve){ configParamNotSet('oauthValve')  }
+
+    if(!config.resourceToSecurityComponent){ configParamNotSet('resourceToSecurityComponent')  }
+    if(!config.securityPlugin){ configParamNotSet('securityPlugin')  }
+
 
     //Load configuration
-    var app = config.app;
-    var srv = config.server;
-    var pg = config.pg;
+    const  app = config.app;
+    const  srv = config.server;
+    const  pg = config.pg;
 
-    var io = require('socket.io').listen(srv, {log: false}); // using "old" socket.io because socket.io 1.0 seems to have a long connection setup on heroku with lots of probe packets
+    const  io = require('socket.io').listen(srv, {log: false}); // using "old" socket.io because socket.io 1.0 seems to have a long connection setup on heroku with lots of probe packets
 
-    var redis = require('redis');
-    var RedisStore = require('socket.io/lib/stores/redis');
-    var redisURL = url.parse(process.env.REDIS_URL);
+    const  redis = require('redis');
+    const  RedisStore = require('socket.io/lib/stores/redis');
+    const  redisURL = url.parse(redis_url);
 
-    var security = require('./js/security.js')(config);
-    var history = require('./js/history.js');
-    var versions = require('./js/versions.js');
+    const  security = require('./js/security.js')(config.resourceToSecurityComponent, config.securityPlugin);
+    const  history = require('./js/history.js');
+    const  versions = require('./js/versions.js');
 
-    var broadcast = function (database, elements) {
-      var deferred = Q.defer();
+
+    const  broadcast = async function (database, elements) {
       // TODO: check sri4node: error like invalid element.type is silently thrown away??
       elements.forEach(function(element) {
-        var resourceName = '/' + inflect.pluralize(element.body.type.toLowerCase());
+        const  resourceName = '/' + inflect.pluralize(element.body.type.toLowerCase());
         if (resourceName === '/people') {
           // seems we don't use the ordinary plural of person...
           resourceName = '/persons'
         }
-        var notificationMsg = {
+        const  notificationMsg = {
           current: '/versions/' + element.body.key,
           previous: 'TODO!', //TODO lookup with db query
           timestamp: element.body.timestamp,
@@ -91,27 +75,19 @@ module.exports = {
         io.sockets.to(resourceName).emit('update', notificationMsg);
         io.sockets.to(element.body.resource).emit('update', notificationMsg);
       });
-
-      deferred.resolve();
-      return deferred.promise;
     };
 
-    app.get('/history', history.setFixedOrderForHistoryAndCheckSomeCustomPrerequisites);
 
-    sri4node.configure(app, pg, {
-      logrequests: false,
-      logsql: false,
-      logdebug: false,
-      authenticate: config.authenticate,
-      identify: config.identify,
-      defaultdatabaseurl: config.databaseUrl,
+    sriConfig = {
+      logrequests : true,
+      logsql: true,
+      logdebug: true,
+
+
       resources: [
         {
           type: '/versions',
-          methods: [
-            'GET',
-            'PUT'
-          ],
+          methods: [ 'GET', 'PUT' ],
           public: false,
           schema: {
             $schema: 'http://json-schema.org/schema#',
@@ -121,8 +97,7 @@ module.exports = {
               key: $s.guid(''),
               timestamp: $s.timestamp('A timestamp when the update occurred. This timestamp is generated on '
                 + 'the client that performs a PUT to /version/{guid}.'),
-              person: $s.string('A permalink to the person that made the modification.'),
-              //TODO: can we use $s.permalink?
+              person: $s.permalink('A permalink to the person that made the modification.'),
               component: $s.string('A permalink to the /security/component that manages this resource.'),
               operation: {
                 description: 'Opperation that has been performed on the resource',
@@ -130,7 +105,7 @@ module.exports = {
               },
               type: $s.string('The $$meta.type of the original resource.'),
               resource: $s.string('Permalink of the resource'),
-              mergedResource: $s.string('Resouce that the document has merged with'),
+              // mergedResource: $s.string('Resouce that the document has merged with'),
               document: {
                 oneOf: [
                   {
@@ -153,23 +128,6 @@ module.exports = {
               'resource'
             ]
           },
-          validate: [versions.documentNotRequiredOnDelete, versions.onlyAllowInsertNoUpdate, versions.notSameVersion],
-          validateDocs: {
-            initializeFirst: {
-              description: "On INITIALIZE check if there is already a version of this resource.",
-              errors: [{
-                code: 'initialize.first',
-                description: 'There are already versions of this resource. You can not initialize or create them.'
-              }]
-            },
-            notSameVersion: {
-              description: "On UPDATE check if the putted resource has the same document as the previous version of this resource.",
-              errors: [{
-                code: 'same.version',
-                description: 'This version is the same as the previous.'
-              }]
-            }
-          },
           query: {
             defaultFilter: $q.defaultFilter
           },
@@ -181,80 +139,51 @@ module.exports = {
             operation: {},
             type: {},
             resource: {},
-            mergedResource: {},
+            // mergedResource: {},
             document: {oninsert: versions.mapInsertDocument}
           },
-          afterread: [security.doSecurityCheckGet],
-          afterupdate: [],
-          afterinsert: [security.doSecurityCheckPut, broadcast],
-          afterdelete: []
-        },
-        {
-          type: '/history',
-          table: 'versions',
-          cache: {
-            ttl: 120,
-            type: 'redis',
-            redis: process.env.REDIS_URL
-          },
-          methods: ['GET'],
-          public: false,
-          secure: [security.checkAccessOnResource],
-          schema: {
-            $schema: 'http://json-schema.org/schema#',
-            title: 'A special resource that presents the history a resource in the API.',
-            type: 'object',
-            properties: {
-              timestamp: $s.timestamp('A timestamp when the update occurred.'),
-              person: $s.string('A permalink to the person that made the modification.'),
-              operation: {
-                description: 'Opperation that has been performed on the resource',
-                enum: ['CREATE', 'UPDATE', 'DELETE', 'INITIALIZE']
-              },
-              resource: $s.string('Permalink of the resource'),
-              from: $s.string('A permalink to the previous version (if existing).'),
-              to: $s.string('A permalink to the current version.'),
-              mergedResource: $s.string('Resouce that the document has merged with'),
-              patch: {
-                type: 'object',
-                description: 'A JSON patch (rfc6902) between this and previous verion. Only present for UPDATE operations.'
-              }
-            },
-            required: []
-          },
-          validate: [],
-          query: {
-            from: history.orderFilter('from'),
-            tokey: history.orderFilter('to'),
-            resources: history.resourcesFilter,
-            defaultFilter: $q.defaultFilter
-          },
-          queryDocs: {
-            from: '',
-            tokey: '',
-            resources: ''
-          },
-          map: {
-            key: {},
-            timestamp: {},
-            person: {},
-            operation: {},
-            resource: {},
-            document: {},
-            mergedResource: {}
-          },
-          handlelistqueryresult: history.handleHistoryListQueryResult,
-          afterread: [],
-          afterupdate: [],
-          afterinsert: [],
-          afterdelete: []
-        }
-      ]
-    });
 
-    var pub = redis.createClient(redisURL.port, redisURL.hostname, {return_buffers: true}); // eslint-disable-line camelcase
-    var sub = redis.createClient(redisURL.port, redisURL.hostname, {return_buffers: true}); // eslint-disable-line camelcase
-    var client = redis.createClient(redisURL.port, redisURL.hostname, {return_buffers: true}); // eslint-disable-line camelcase
+          beforeInsert: [ versions.requireDocumentOnCreateOrUpdate ],
+          afterRead:    [ security.doSecurityCheckGet ],
+          afterUpdate:  [ versions.updateNotAllowed ],
+          afterInsert:  [ security.doSecurityCheckPut, versions.notSameVersion, broadcast ],
+
+          customRoutes: [ {
+                            like: "",
+                            routePostfix: "/history",
+                            httpMethods: ['GET'],
+                            alterMapping: (mapping) => {
+                              mapping.beforeRead = [ security.checkAccessOnResource, history.setFixedOrderForHistoryAndCheckSomeCustomPrerequisites ]
+                              mapping.afterRead = [ ]
+
+                              mapping.query = {
+                                from: history.orderFilter('from'),
+                                tokey: history.orderFilter('to'),
+                                resources: history.resourcesFilter,
+                                defaultFilter: $q.defaultFilter
+                              };
+
+                              mapping.schema.properties.patch = {
+                                type: 'object',
+                                description: 'A JSON patch (rfc6902) between this and previous verion. Only present for UPDATE operations.'
+                              };
+                              mapping.schema.properties.from = $s.string('A permalink to the previous version (if existing).');
+                              mapping.schema.properties.to = $s.string('A permalink to the current version.');             
+
+                              mapping.transformResponse = [ history.handleHistoryListQueryResult ];
+                            }
+                          } ]
+        }],     
+    };
+    
+    config.securityPlugin.init(sriConfig)
+    await sri4node.configure(app, sriConfig)
+
+
+    // broadcast part
+    const  pub = redis.createClient(redisURL.port, redisURL.hostname, {return_buffers: true}); // eslint-disable-line camelcase
+    const  sub = redis.createClient(redisURL.port, redisURL.hostname, {return_buffers: true}); // eslint-disable-line camelcase
+    const  client = redis.createClient(redisURL.port, redisURL.hostname, {return_buffers: true}); // eslint-disable-line camelcase
 
     if (redisURL.auth) {
       pub.auth(redisURL.auth.split(':')[1]);
@@ -268,19 +197,13 @@ module.exports = {
                                      redisSub: sub,
                                      redisClient: client
                                    }));
-
-    app.get('/updates', config.authenticate, function (req, res) {
-      var forwardProto = req.get('X-Forwarded-Proto');
+    app.get('/updates', config.securityPlugin.getOauthValve().authenticationMiddleware(true), function (req, res) {
+      const  forwardProto = req.get('X-Forwarded-Proto');
       res.send({href: (forwardProto ? forwardProto : req.protocol) + '://' + req.headers.host});
     });
 
-    app.get('/rooms', function (req, res) { // authentication.isAuthenticated
+    app.get('/rooms', config.securityPlugin.getOauthValve().authenticationMiddleware(true), function (req, res) {
       res.send({rooms: Object.keys(io.sockets.adapter.rooms)});
-    });
-
-    app.get('/msg', function (req, res) {
-      io.sockets.to('/schools').emit('update', 'FOOBAR!');
-      res.send('DONE.');
     });
 
     app.use('/test', config.express.static(__dirname + '/test/test.html'));

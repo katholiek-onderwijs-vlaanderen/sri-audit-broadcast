@@ -2,11 +2,8 @@
  * Created by guntherclaes on 05/04/16.
  */
 
-var Q = require('q');
-var sri4node = require('sri4node');
-var $u = sri4node.utils;
-var _ = require('lodash');
-var jiff = require('jiff');
+const sri4node = require('sri4node');
+const $u = sri4node.utils;
 
 function removeDollarDollarFieldsFromJSON (json) {
   if (json instanceof Array) {
@@ -58,131 +55,92 @@ function calcType(json){
 }
 
 module.exports = {
-  onlyAllowInsertNoUpdate: function (elm, database) {
-    var deferred = Q.defer();
-    var query = $u.prepareSQL("validationUpdate");
-    query.sql('SELECT * FROM versions WHERE key = ').param(elm.key);
-    $u.executeSQL(database, query)
-      .then(function(data){
-        removePersonContactDetailsFromJSON(calcType(elm), elm);
-        removeDollarDollarFieldsFromJSON(elm);
-        if (data.rows.length > 0 && !_.isEqual(data.rows[0].document, elm.document)) {
-              deferred.reject({
-                statusCode: 409,
-                body: {
-                  code: 'existing.version.cannot.be.updated',
-                  message: 'Existing versions cannot be updated. A new version should be created.'
-                }
-              });
-          }else{
-            deferred.resolve();
-          }
-        }, function (err) {
-          console.warn({error: 'database.error.validation.', version: '/versions/' + elm.key, message: err});
-          deferred.reject();
-        }
-      ).catch(function (ex) {
-        console.error(ex.stack);
-    });
-    return deferred.promise;
-  },
-  addPrevAndNextLinksToJson: function (database, elements, me) {
-    console.log("[audit/broadcast - version] addPrevAndNextLinksToJson");
 
-    return Q.all(elements.map(function (element) {
-      var deferred = Q.defer();
-      var query = $u.prepareSQL('key');
-      query.sql('select next, previous from versions_previous_next_view where key = ').param(element.key);
-      $u.executeSQL(database, query).then(function (result) {
-        if (result.rows[0].next && result.rows[0].next !== element.key) {
-          element.$$meta.next = '/versions/' + result.rows[0].next;
-        }
-        if (result.rows[0].previous && result.rows[0].previous !== element.key) {
-          element.$$meta.previous = '/versions/' + result.rows[0].previous;
-        }
-        deferred.resolve();
-      }).catch(function (err) {
-        console.log(err);
-        deferred.reject(err);
-      });
-      return deferred.promise;
-    }));
-
-  },
-  mapInsertDocument: function (key, element) {
+  mapInsertDocument: function (element) {
     removePersonContactDetailsFromJSON(calcType(element), element);
     removeDollarDollarFieldsFromJSON(element);
     return element;
   },
-  notSameVersion: function (body, database) {
-    //console.log('[audit/broadcast - version - /versions/' + body.key +'] PUT version was:' + JSON.stringify(body));
 
-    var d = Q.defer();
-    var query = $u.prepareSQL("validation");
-    if(body.operation === 'INITIALIZE'){
-      query.sql('SELECT * FROM versions WHERE resource = ').param(body.resource);
-      $u.executeSQL(database, query, false, false)
-        .then(function(data){
-          removePersonContactDetailsFromJSON(body.type, body.document);
-          removeDollarDollarFieldsFromJSON(body.document);
-          if (data.rowCount > 0  && !_.isEqual(data.rows[0].document, body.document)) {
-            d.reject({
-              statusCode: 409,
-              body: {
-                code: 'initialize.first',
-                version: '/versions/' + body.key,
-                message: 'There are already versions of this resource. You can not initialize or create them.'
-              }
-            });
-          }else{
-            d.resolve();
-          }
-        }, function (err) {
-          //Should not not rollback if database fails.. we want the versions
-          console.warn({error: 'database.error.validation.', version: '/versions/' + body.key, message: err});
-          d.resolve();
-        }
-      );
-    }else if(body.operation === 'UPDATE'){
-      query.sql('SELECT * FROM versions WHERE key != ').param(body.key).sql(' AND resource = ').param(body.resource).sql(' ORDER BY timestamp desc LIMIT 1');
-      $u.executeSQL(database, query, false, false)
-        .then(function(data){
-          removePersonContactDetailsFromJSON(body.type, body.document);
-          removeDollarDollarFieldsFromJSON(body.document);
-          if(data.rowCount > 0 && _.isEqual(data.rows[0].document, body.document) && data.rows[0].key != body.key){
-            d.reject({
-              statusCode: 409,
-              body: {
-                code: 'same.version',
-                version: '/versions/' + body.key,
-                message: 'This version is the same as the previous.'
-              }
-            });
-          }else{
-            d.resolve();
-          }
-        }, function (err) {
-          //Should not not rollback if database fails.. we want the versions
-          console.warn({error: 'database.error.validation.', version: '/versions/' + body.key, message: err});
-          d.resolve();
-        }
-      );
-    } else {
-      d.resolve();
-    }
-    return d.promise;
-  },
-  documentNotRequiredOnDelete: function (body, database) {
-    var d = Q.defer();
-    if (! body.document) {
-      if (['CREATE', 'UPDATE'].indexOf(body.operation) > -1) {
-        d.reject();
-      } else {
-        d.resolve();
+  updateNotAllowed: async function ( tx, sriRequest, elements ) {
+    elements.forEach( ({ incoming, stored }) => {
+      mapInsertDocument(incoming)
+      if (!_.isEqual(incoming.document, incoming.document)) {
+        throw new sriRequest.SriError({status: 409, errors: 
+                    [ { code: 'existing.version.cannot.be.updated'
+                      , msg: 'Existing versions cannot be updated. A new version should be created.'} ]
+                  })
       }
-    } else {
-      d.resolve();
-    }
-    return d.promise;
+    })     
+  },
+
+//not used?
+  // addPrevAndNextLinksToJson: async function (database, elements, me) {
+  //   console.log("[audit/broadcast - version] addPrevAndNextLinksToJson");
+  //   await pMap()
+  //   return Q.all(elements.map(function (element) {
+  //     const deferred = Q.defer();
+  //     const query = $u.prepareSQL('key');
+  //     query.sql('select next, previous from versions_previous_next_view where key = ').param(element.key);
+  //     $u.executeSQL(database, query).then(function (result) {
+  //       if (result.rows[0].next && result.rows[0].next !== element.key) {
+  //         element.$$meta.next = '/versions/' + result.rows[0].next;
+  //       }
+  //       if (result.rows[0].previous && result.rows[0].previous !== element.key) {
+  //         element.$$meta.previous = '/versions/' + result.rows[0].previous;
+  //       }
+  //       deferred.resolve();
+  //     }).catch(function (err) {
+  //       console.log(err);
+  //       deferred.reject(err);
+  //     });
+  //     return deferred.promise;
+  //   }));
+
+  // },
+
+
+
+  notSameVersion: async function ( tx, sriRequest, [ elements ] ) {
+    //console.log('[audit/broadcast - version - /versions/' + body.key +'] PUT version was:' + JSON.stringify(body));
+    await pMap(elements, async ({ incoming, stored }) => {
+      const query = $u.prepareSQL("validation");
+      if (incoming.operation === 'INITIALIZE') {
+        query.sql('SELECT * FROM versions WHERE resource = ').param(body.resource);
+        const rows = await pgExec(tx, query);
+        mapInsertDocument(incoming)
+        if (rows.length > 0  && !_.isEqual(rows[0].document, incoming.document)) {
+          throw new sriRequest.SriError({status: 409, errors: 
+                      [ { code: 'already.initialized'
+                        , version: '/versions/' + incoming.key
+                        , msg: 'There are already versions of this resource. You can not initialize or create them.'} ]
+                    })
+        }
+      } else if (incoming.operation === 'UPDATE') {
+        query.sql('SELECT * FROM versions WHERE key != ').param(incoming.key).sql(' AND resource = ').param(incoming.resource).sql(' ORDER BY timestamp desc LIMIT 1');
+        const rows = await pgExec(tx, query);
+        mapInsertDocument(incoming)
+        if (rows.length > 0 && _.isEqual(rows[0].document, incoming.document) &&rows[0].key != incoming.key) {
+          throw new sriRequest.SriError({status: 409, errors: 
+                      [ { code: 'same.version'
+                        , version: '/versions/' + incoming.key
+                        , msg: 'This version is the same as the previous.'} ]
+                    })          
+        }
+      }
+    }, { concurrency: 1 })
+  },
+
+  requireDocumentOnCreateOrUpdate: async function ( tx, sriRequest, elements ) {
+    elements.forEach( ({ incoming }) => {
+      if (! incoming.document) {
+        if (['CREATE', 'UPDATE'].indexOf(incoming.operation) > -1) {
+          throw new sriRequest.SriError({status: 409, errors: 
+                      [ { code: 'document.required'
+                        , msg: 'Create or update must requires a \'document\' field.'} ]
+                    })        
+        }
+      }
+    })
   }
 };
