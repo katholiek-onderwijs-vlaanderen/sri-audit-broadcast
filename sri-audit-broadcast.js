@@ -89,6 +89,7 @@ module.exports = {
           type: '/versions',
           methods: [ 'GET', 'PUT' ],
           public: false,
+          listResultDefaultIncludeCount: false,
           schema: {
             $schema: 'http://json-schema.org/schema#',
             title: 'A regular resource that contains a specific version of a resource in the API.',
