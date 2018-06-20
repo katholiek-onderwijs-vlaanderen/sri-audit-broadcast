@@ -4,6 +4,7 @@
 
 const sri4node = require('sri4node');
 const $u = sri4node.utils;
+const pgExec = $u.executeSQL
 
 function removeDollarDollarFieldsFromJSON (json) {
   if (json instanceof Array) {
@@ -74,35 +75,31 @@ module.exports = {
     })     
   },
 
-//not used?
-  // addPrevAndNextLinksToJson: async function (database, elements, me) {
-  //   console.log("[audit/broadcast - version] addPrevAndNextLinksToJson");
-  //   await pMap()
-  //   return Q.all(elements.map(function (element) {
-  //     const deferred = Q.defer();
-  //     const query = $u.prepareSQL('key');
-  //     query.sql('select next, previous from versions_previous_next_view where key = ').param(element.key);
-  //     $u.executeSQL(database, query).then(function (result) {
-  //       if (result.rows[0].next && result.rows[0].next !== element.key) {
-  //         element.$$meta.next = '/versions/' + result.rows[0].next;
-  //       }
-  //       if (result.rows[0].previous && result.rows[0].previous !== element.key) {
-  //         element.$$meta.previous = '/versions/' + result.rows[0].previous;
-  //       }
-  //       deferred.resolve();
-  //     }).catch(function (err) {
-  //       console.log(err);
-  //       deferred.reject(err);
-  //     });
-  //     return deferred.promise;
-  //   }));
 
-  // },
-
+  addPrevAndNextLinksToJson: async function( tx, sriRequest, elements ) {
+    console.log("[audit/broadcast - version] addPrevAndNextLinksToJson");
+    // only add prev and next links for individual resources, not in list 
+    // otherwise much database queries and prev/next is propably not so relevant in list
+    if (elements.length === 1) {
+      // The current implemetation with the view is way too slow
+      // TODO: implement this efficiently ! (a solution might be to store prev/next with the version and set
+      // prev/next at insert)
+      // const element = elements[0].stored;
+      // const query = $u.prepareSQL('get_next_previous');
+      // query.sql('select next, previous from versions_previous_next_view where key = ').param(element.key);
+      // const [ row ] = await pgExec(tx, query);
+      // if (row.next && row.next !== element.key) {
+      //   element.$$meta.next = '/versions/' + row.next;
+      // }
+      // if (row.previous && row.previous !== element.key) {
+      //   element.$$meta.previous = '/versions/' + row.previous;
+      // }
+    }
+  },
 
 
   notSameVersion: async function ( tx, sriRequest, [ elements ] ) {
-    //console.log('[audit/broadcast - version - /versions/' + body.key +'] PUT version was:' + JSON.stringify(body));
+    console.log('[audit/broadcast - version - /versions/' + body.key +'] PUT version was:' + JSON.stringify(body));
     await pMap(elements, async ({ incoming, stored }) => {
       const query = $u.prepareSQL("validation");
       if (incoming.operation === 'INITIALIZE') {

@@ -145,7 +145,7 @@ module.exports = {
           },
 
           beforeInsert: [ versions.requireDocumentOnCreateOrUpdate ],
-          afterRead:    [ security.doSecurityCheckGet ],
+          afterRead:    [ security.doSecurityCheckGet, versions.addPrevAndNextLinksToJson ],
           afterUpdate:  [ versions.updateNotAllowed ],
           afterInsert:  [ security.doSecurityCheckPut, versions.notSameVersion, broadcast ],
 

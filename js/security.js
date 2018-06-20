@@ -21,6 +21,7 @@ module.exports = function (resourceToSecurityComponent, securityPlugin) {
                               ({ component: resourceToSecurityComponent(resource), resource: resource, ability: 'read' }) )
                         )
     },
+
     doSecurityCheckGet: async function( tx, sriRequest, elements ) {
       await securityPlugin.customCheckBatch
                         ( tx

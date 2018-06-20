@@ -37,3 +37,6 @@ over(partition by resource
 order by timestamp
 rows between current row and 1 following) as next
 from versions;
+
+
+CREATE INDEX lower_case_versions_resource_idx ON versions ((lower(resource)));
