@@ -54,7 +54,7 @@ module.exports = {
 
     const  broadcast = async function ( tx, sriRequest, elements ) {
       elements.forEach(function({ permalink, stored, incoming }) {
-        const  resourceName = '/' + inflect.pluralize(incoming.type.toLowerCase());
+        let resourceName = '/' + inflect.pluralize(incoming.type.toLowerCase());
         if (resourceName === '/people') {
           // seems we don't use the ordinary plural of person...
           resourceName = '/persons'
