@@ -61,7 +61,7 @@ module.exports = {
         }
         const  notificationMsg = {
           current: permalink,
-          previous: `/versions/${stored.key}`,
+          previous: stored !== null ? `/versions/${stored.key}` : null,
           timestamp: incoming.timestamp,
           person: incoming.person,
           operation: incoming.operation,
