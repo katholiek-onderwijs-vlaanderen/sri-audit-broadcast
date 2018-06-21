@@ -31,8 +31,12 @@ module.exports = function (resourceToSecurityComponent, securityPlugin) {
                         )
     },
     doSecurityCheckPut: async function( tx, sriRequest, elements ) {
-      const component = resourceToSecurityComponent(resource);
-      await securityPlugin.customCheck(tx, sriRequest, 'create', undefined, component)
+      await securityPlugin.customCheckBatch
+                        ( tx
+                        , sriRequest
+                        , elements.map( ({ incoming }) => 
+                              ({ component: resourceToSecurityComponent(incoming.resource), resource: incoming.resource, ability: 'create' }) )
+                        )
     }
   };
 };
