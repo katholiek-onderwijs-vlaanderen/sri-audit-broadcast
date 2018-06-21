@@ -52,22 +52,21 @@ module.exports = {
     const  versions = require('./js/versions.js');
 
 
-    const  broadcast = async function (database, elements) {
-      // TODO: check sri4node: error like invalid element.type is silently thrown away??
-      elements.forEach(function(element) {
-        const  resourceName = '/' + inflect.pluralize(element.body.type.toLowerCase());
+    const  broadcast = async function ( tx, sriRequest, elements ) {
+      elements.forEach(function({ permalink, stored, incoming }) {
+        const  resourceName = '/' + inflect.pluralize(incoming.type.toLowerCase());
         if (resourceName === '/people') {
           // seems we don't use the ordinary plural of person...
           resourceName = '/persons'
         }
         const  notificationMsg = {
-          current: '/versions/' + element.body.key,
-          previous: 'TODO!', //TODO lookup with db query
-          timestamp: element.body.timestamp,
-          person: element.body.person,
-          operation: element.body.operation,
-          type: element.body.type,
-          permalink: element.body.resource
+          current: permalink,
+          previous: `/versions/${stored.key}`,
+          timestamp: incoming.timestamp,
+          person: incoming.person,
+          operation: incoming.operation,
+          type: incoming.type,
+          permalink: incoming.resource
         };
 
         console.log('[audit/broadcast - broadcast] Room: ' + resourceName);
