@@ -99,30 +99,24 @@ module.exports = {
 
 
   notSameVersion: async function ( tx, sriRequest, [ elements ] ) {
-    console.log('[audit/broadcast - version - /versions/' + body.key +'] PUT version was:' + JSON.stringify(body));
-    await pMap(elements, async ({ incoming, stored }) => {
+    await pMap(elements, async ({ permalink, incoming, stored }) => {
+      console.log(`[audit/broadcast - version - ${permalink} ] PUT version was:' + JSON.stringify(incoming)`);
       const query = $u.prepareSQL("validation");
       if (incoming.operation === 'INITIALIZE') {
-        query.sql('SELECT * FROM versions WHERE resource = ').param(body.resource);
-        const rows = await pgExec(tx, query);
-        mapInsertDocument(incoming)
-        if (rows.length > 0  && !_.isEqual(rows[0].document, incoming.document)) {
+        if (stored !== null && ! _.isEqual(incoming.document, stored.document)) {
           throw new sriRequest.SriError({status: 409, errors: 
                       [ { code: 'already.initialized'
-                        , version: '/versions/' + incoming.key
+                        , version: permalink
                         , msg: 'There are already versions of this resource. You can not initialize or create them.'} ]
                     })
         }
       } else if (incoming.operation === 'UPDATE') {
-        query.sql('SELECT * FROM versions WHERE key != ').param(incoming.key).sql(' AND resource = ').param(incoming.resource).sql(' ORDER BY timestamp desc LIMIT 1');
-        const rows = await pgExec(tx, query);
-        mapInsertDocument(incoming)
-        if (rows.length > 0 && _.isEqual(rows[0].document, incoming.document) &&rows[0].key != incoming.key) {
+        if (stored !== null && _.isEqual(incoming.document, stored.document) && incoming.key !== stored.key ) {
           throw new sriRequest.SriError({status: 409, errors: 
                       [ { code: 'same.version'
-                        , version: '/versions/' + incoming.key
+                        , version: permalink
                         , msg: 'This version is the same as the previous.'} ]
-                    })          
+                    })
         }
       }
     }, { concurrency: 1 })
