@@ -99,7 +99,7 @@ module.exports = {
   },
 
 
-  notSameVersion: async function ( tx, sriRequest, [ elements ] ) {
+  notSameVersion: async function ( tx, sriRequest, elements ) {
     await pMap(elements, async ({ permalink, incoming, stored }) => {
       console.log(`[audit/broadcast - version - ${permalink} ] PUT version was:' + JSON.stringify(incoming)`);
       const query = $u.prepareSQL("validation");
