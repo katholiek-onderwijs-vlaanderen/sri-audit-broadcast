@@ -72,7 +72,7 @@ module.exports = {
         console.log('[audit/broadcast - broadcast] Room: ' + resourceName);
         console.log('[audit/broadcast - broadcast] Message: ' + JSON.stringify(notificationMsg));
         io.sockets.to(resourceName).emit('update', notificationMsg);
-        io.sockets.to(element.body.resource).emit('update', notificationMsg);
+        io.sockets.to(incoming.resource).emit('update', notificationMsg);
       });
     };
 
