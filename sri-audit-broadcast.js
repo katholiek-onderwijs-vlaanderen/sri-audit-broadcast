@@ -98,7 +98,8 @@ module.exports = {
               key: $s.guid(''),
               timestamp: $s.timestamp('A timestamp when the update occurred. This timestamp is generated on '
                 + 'the client that performs a PUT to /version/{guid}.'),
-              person: $s.permalink('A permalink to the person that made the modification.'),
+              // person: $s.permalink('A permalink to the person that made the modification.'),
+              person: $s.string('A permalink to the person that made the modification.'),
               component: $s.string('A permalink to the /security/component that manages this resource.'),
               operation: {
                 description: 'Opperation that has been performed on the resource',
