@@ -2,6 +2,7 @@
  * Created by guntherclaes on 05/04/16.
  */
 
+const pMap = require('p-map');
 const sri4node = require('sri4node');
 const $u = sri4node.utils;
 const pgExec = $u.executeSQL
