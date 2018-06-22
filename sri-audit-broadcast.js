@@ -144,7 +144,7 @@ module.exports = {
             document: {oninsert: versions.mapInsertDocument}
           },
 
-          beforeInsert: [ versions.requireDocumentOnCreateOrUpdate ],
+          beforeInsert: [ versions.requireDocumentOnCreateOrUpdate, security.checkIfTypeIsMappedToSecurityComponent ],
           afterRead:    [ security.doSecurityCheckGet, versions.addPrevAndNextLinksToJson ],
           afterUpdate:  [ versions.updateNotAllowed ],
           afterInsert:  [ security.doSecurityCheckPut, versions.notSameVersion, broadcast ],

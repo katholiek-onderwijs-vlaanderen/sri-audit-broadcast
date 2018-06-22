@@ -4,6 +4,17 @@
 
 module.exports = function (resourceToSecurityComponent, securityPlugin) {
   return {
+    checkIfTypeIsMappedToSecurityComponent: async function ( tx, sriRequest, elements ) {
+      elements.forEach( ({ incoming }) => {
+          if (resourceToSecurityComponent(incoming.resource) === null) {
+            throw new sriRequest.SriError(
+                { status: 501, 
+                  errors: [{code: 'resourcetype.is.not.mapped', msg: 'The type of the resource is not mapped to a security component.', parameter: incoming.resource}]
+                })
+          }
+        })
+    },
+
     checkAccessOnResource: async function ( tx, sriRequest ) {
       // Only GET requests with specific resource specified can be checked in pre-process secure function,
       // others can only be checked in post-processing.
