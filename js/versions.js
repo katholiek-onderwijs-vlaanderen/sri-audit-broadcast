@@ -66,7 +66,7 @@ module.exports = {
 
   updateNotAllowed: async function ( tx, sriRequest, elements ) {
     elements.forEach( ({ incoming, stored }) => {
-      mapInsertDocument(incoming)
+      this.mapInsertDocument(incoming)
       if (!_.isEqual(incoming.document, incoming.document)) {
         throw new sriRequest.SriError({status: 409, errors: 
                     [ { code: 'existing.version.cannot.be.updated'
