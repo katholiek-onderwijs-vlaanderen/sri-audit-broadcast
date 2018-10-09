@@ -46,7 +46,7 @@ module.exports = function (resourceToSecurityComponent, securityPlugin) {
                         ( tx
                         , sriRequest
                         , elements.map( ({ incoming }) => 
-                              ({ component: 'audit-broadcast-api', resource: null, ability: 'create' }) )
+                              ({ component: '/security/components/audit-broadcast-api', ability: 'create' }) )
                         )
     }
   };
