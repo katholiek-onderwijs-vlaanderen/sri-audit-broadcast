@@ -25,7 +25,7 @@ module.exports = function (resourceToSecurityComponent, securityPlugin) {
         resources = sriRequest.query.resources.split(',')
       } 
       console.log("[audit/broadcast - security] check access on resource(s) - " + resources);
-      await securityPlugin.customCheckBatch
+      await securityPlugin.allowedCheckBatch
                         ( tx
                         , sriRequest
                         , resources.map( (resource) => 
@@ -34,7 +34,7 @@ module.exports = function (resourceToSecurityComponent, securityPlugin) {
     },
 
     doSecurityCheckGet: async function( tx, sriRequest, elements ) {
-      await securityPlugin.customCheckBatch
+      await securityPlugin.allowedCheckBatch
                         ( tx
                         , sriRequest
                         , elements.map( ({ stored }) => 
@@ -42,7 +42,7 @@ module.exports = function (resourceToSecurityComponent, securityPlugin) {
                         )
     },
     doSecurityCheckPut: async function( tx, sriRequest, elements ) {
-      await securityPlugin.customCheckBatch
+      await securityPlugin.allowedCheckBatch
                         ( tx
                         , sriRequest
                         , elements.map( ({ incoming }) => 
