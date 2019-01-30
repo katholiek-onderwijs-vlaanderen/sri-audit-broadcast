@@ -1,6 +1,6 @@
 {
   "name": "sri-audit-broadcast",
-  "version": "2.0.0",
+  "version": "2.0.4",
   "private": false,
   "description": "Audit and broadcast server",
   "main": "sri-audit-broadcast.js",
@@ -17,6 +17,7 @@
     "socket.io": "2.2.0",
     "socket.io-redis": "5.2.0",
     "p-map": "1.2.0",
+    "jiff": "0.7.3",
     "sri4node": "https://github.com/katholiek-onderwijs-vlaanderen/sri4node.git#sprint-190-0"
   },
   "devDependencies ": {
