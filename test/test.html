@@ -6,13 +6,7 @@
 	<title>Socket.io test...</title>
 
 	<script src="//ajax.googleapis.com/ajax/libs/angularjs/1.2.15/angular.min.js"></script>
-	<!--<script src="./scripts/3d_party/angular.js"></script>-->
-	<!--<script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/0.9.16/socket.io.min.js"></script>-->
-	<!--script src="https://cdn.socket.io/socket.io-1.3.6.js"></script-->
-	<script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/0.9.17/socket.io.min.js"></script>
-
-	<!-- MY APP !!! -->
-	<!-- <script type="text/javascript" src="scripts/app.js"></script> -->
+	<script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.slim.js"></script>
 </head>
 
 <body ng-app="MyApp">
@@ -38,17 +32,12 @@
 
 	var myCtrlFunction = function( $scope, $http, $timeout ) {
 		$scope.messageUrl = window.location.origin
-//		$scope.broadcastUrl = "http://localhost:2345/messages/123456"
-		//$scope.messageUrl = "http://testnode01.vsko.be:2345"; //"https://localhost:2346"
-		//$scope.broadcastUrl = "https://localhost:2346/messages/123456"
 		$scope.messageType = "/schools";
 		$scope.subscriptions = [];
 
 		$scope.error = "";
 		$scope.messages = [];
-//		$scope.onConnectClick = function() {
-//			console.log( "Trying to connect to " )
-//		}
+
 
 		$scope.io = io;
 		$scope.socket = null;
@@ -60,9 +49,6 @@
 				$scope.socket.on( 'connect', function ( data ) {
 					$scope.error = "Successfully connected...";
 					console.log( "CONNECTED: " + data );
-					//$scope.socket.join( 'persons' );
-					//$scope.socket.emit( 'subscribe', { room: 'persons' } )
-					//socket.emit('my other event', { my: 'data' });
 					if ( ! $scope.$$phase ) {
 						$scope.$apply();
 					}
@@ -74,45 +60,26 @@
 					if ( ! $scope.$$phase ) {
 						$scope.$apply();
 					}
-					//socket.emit('my other event', { my: 'data' });
 				} );
-				// $scope.socket.on( 'subscribe', function ( data ) {
-				// 	$scope.error = "New subscription...";
-				// 	console.log( data );
-				// 	$scope.messages.push( new Date() + "SUBSCRIBE: " + data );
-				// 	if ( ! $scope.$$phase ) {
-				// 		$scope.$apply();
-				// 	}
-				// 	//socket.emit('my other event', { my: 'data' });
-				// } );
 			}
 		}
 
 		connectIfNotConnected();
 
 		$scope.socket.emit('join', $scope.messageType);
-		// $scope.socket.join($scope.messageType, function() {
 		$scope.subscriptions.push( $scope.messageType );
 
 		$scope.subscribeClick = function() {
 			connectIfNotConnected();
 
 			$scope.socket.emit('join', $scope.messageType);
-			// $scope.socket.join($scope.messageType, function() {
-				$scope.subscriptions.push( $scope.messageType );
-			// });
-
-			//$scope.socket.emit( 'subscribe', { room: $scope.messageType } );
-
+			$scope.subscriptions.push( $scope.messageType );
 		}
 		$scope.unsubscribeClick = function() {
-			// $scope.socket.emit( 'unsubscribe', { room: $scope.messageType } );
-
 			$scope.subscriptions = $scope.subscriptions.filter( function( i ) {
 				return i != $scope.messageType;
 			} );
-			$scope.socket.emit('leave', $scope.messageType);
-			// $scope.socket.leave($scope.messageType);
+			$scope.socket.leave($scope.messageType);
 		}
 	}
 

@@ -3,6 +3,7 @@
  */
 
 const  inflect = require('i')();
+const  _ = require('lodash');
 
 const  sri4node = require('sri4node');
 const  $u = sri4node.utils;
@@ -41,11 +42,15 @@ module.exports = {
     const  srv = config.server;
     const  pg = config.pg;
 
-    const  io = require('socket.io').listen(srv, {log: false}); // using "old" socket.io because socket.io 1.0 seems to have a long connection setup on heroku with lots of probe packets
+    
+    const io = require('socket.io')(srv);
+    const redis = require('redis');
+    const redisAdapter = require('socket.io-redis');
+    const pub = redis.createClient(redis_url);
+    const sub = redis.createClient(redis_url);
+    io.adapter(redisAdapter({ pubClient: pub, subClient: sub }));
 
-    const  redis = require('redis');
-    const  RedisStore = require('socket.io/lib/stores/redis');
-    const  redisURL = url.parse(redis_url);
+
 
     const  security = require('./js/security.js')(config.resourceToSecurityComponent, config.securityPlugin);
     const  history = require('./js/history.js');
@@ -71,8 +76,8 @@ module.exports = {
 
         console.log('[audit/broadcast - broadcast] Room: ' + resourceName);
         console.log('[audit/broadcast - broadcast] Message: ' + JSON.stringify(notificationMsg));
-        io.sockets.to(resourceName).emit('update', notificationMsg);
-        io.sockets.to(incoming.resource).emit('update', notificationMsg);
+        io.to(resourceName).emit('update', notificationMsg);
+        io.to(incoming.resource).emit('update', notificationMsg);
       });
     };
 
@@ -180,44 +185,29 @@ module.exports = {
     config.securityPlugin.init(sriConfig)
     await sri4node.configure(app, sriConfig)
 
-
-    // broadcast part
-    const  pub = redis.createClient(redisURL.port, redisURL.hostname, {return_buffers: true}); // eslint-disable-line camelcase
-    const  sub = redis.createClient(redisURL.port, redisURL.hostname, {return_buffers: true}); // eslint-disable-line camelcase
-    const  client = redis.createClient(redisURL.port, redisURL.hostname, {return_buffers: true}); // eslint-disable-line camelcase
-
-    if (redisURL.auth) {
-      pub.auth(redisURL.auth.split(':')[1]);
-      sub.auth(redisURL.auth.split(':')[1]);
-      client.auth(redisURL.auth.split(':')[1]);
-    }
-
-    io.set('store', new RedisStore({
-                                     redis: redis,
-                                     redisPub: pub,
-                                     redisSub: sub,
-                                     redisClient: client
-                                   }));
     app.get('/updates', config.securityPlugin.getOauthValve().authenticationMiddleware(true), function (req, res) {
       const  forwardProto = req.get('X-Forwarded-Proto');
       res.send({href: (forwardProto ? forwardProto : req.protocol) + '://' + req.headers.host});
     });
 
-    app.get('/rooms', config.securityPlugin.getOauthValve().authenticationMiddleware(true), function (req, res) {
-      res.send({rooms: Object.keys(io.sockets.adapter.rooms)});
+    app.get('/stats', config.securityPlugin.getOauthValve().authenticationMiddleware(true), function (req, res) {      
+      const [ subscribedResources, socketIds ] = _.partition(Object.keys(io.sockets.adapter.rooms), s => s.startsWith('/') );
+      res.send({ nrConnections: socketIds.length, subscribedResources: subscribedResources });
     });
+
 
     app.use('/test', config.express.static(__dirname + '/test/test.html'));
 
-    io.sockets.on('connection', function (socket) {
+
+    io.on('connection', client => {
       console.log('[audit/broadcast - socket] Received Connection');
-      socket.on('join', function (roomName) {
+      client.on('join', roomName => {
         console.log('[audit/broadcast - socket] Joining Room: ' + roomName);
-        socket.join(roomName);
+        client.join(roomName);
       });
-      socket.on('leave', function (roomName) {
+      client.on('leave', roomName => {
         console.log('[audit/broadcast - socket] Leaving Room: ' + roomName);
-        socket.leave(roomName);
+        client.leave(roomName);
       });
     });
 
