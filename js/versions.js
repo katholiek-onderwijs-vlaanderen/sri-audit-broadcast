@@ -81,7 +81,11 @@ module.exports = {
       console.log(`[audit/broadcast - version - ${permalink} ] PUT version was:' + JSON.stringify(incoming)`);
       const query = $u.prepareSQL("validation");
       if (incoming.operation === 'INITIALIZE') {
-        if (stored !== null && ! _.isEqual(incoming.document, stored.document)) {
+        query.sql('SELECT * FROM versions WHERE resource = ').param(body.resource)
+             .sql('LIMIT 1');
+        const [ row ] = await pgExec(tx, query);
+        mapInsertDocument(incoming);
+        if (row != undefined  && !_.isEqual(row.document, incoming.document)) {
           throw new sriRequest.SriError({status: 409, errors: 
                       [ { code: 'already.initialized'
                         , version: permalink
@@ -89,7 +93,12 @@ module.exports = {
                     })
         }
       } else if (incoming.operation === 'UPDATE') {
-        if (stored !== null && _.isEqual(incoming.document, stored.document) && incoming.key !== stored.key ) {
+        query.sql('SELECT * FROM versions WHERE key != ').param(incoming.key)
+             .sql(' AND resource = ').param(incoming.resource)
+             .sql(' ORDER BY timestamp desc LIMIT 1');
+        const [ row ] = await pgExec(tx, query);
+        mapInsertDocument(incoming);
+        if (row != undefined  && _.isEqual(row.document, incoming.document)) {
           throw new sriRequest.SriError({status: 409, errors: 
                       [ { code: 'same.version'
                         , version: permalink
