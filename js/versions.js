@@ -25,29 +25,6 @@ function removeDollarDollarFieldsFromJSON (json) {
   }
 };
 
-function removePersonContactDetailsFromJSON (type, json) {
-  if(type === 'PERSON') {
-    doRemoval(type, json);
-  }
-  function doRemoval(type, json){
-    if (json instanceof Array) {
-      json.forEach(function (e) {
-        doRemoval(type, e);
-      });
-    } else if (json instanceof Object) {
-      Object.keys(json).forEach(function (key) {
-        if (json[key] instanceof Object) {
-          doRemoval(type, json[key]);
-        }
-        //Should also add mergedPersons in the future
-        if (key === 'emailAddresses' || key === 'addresses' || key === 'phones' || key === 'bankAccounts' || key === 'mergedPersons') {
-          delete json[key];
-        }
-      });
-    }
-  }
-};
-
 function calcType(json){
   if(json.type){
     return json.type;
@@ -60,7 +37,6 @@ function calcType(json){
 module.exports = {
 
   mapInsertDocument: function (element) {
-    removePersonContactDetailsFromJSON(calcType(element), element);
     removeDollarDollarFieldsFromJSON(element);
     return element;
   },
