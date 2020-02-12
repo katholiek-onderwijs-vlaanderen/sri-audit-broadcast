@@ -22,7 +22,7 @@ module.exports = {
         row.from = '/versions/' + fromVersion.key;
       }
       row.to = '/versions/' + row.key;
-      if (row.operation === 'UPDATE' ) {
+      if (row.operation === 'UPDATE' || row.operation === 'MERGE') {
         row.patch = jiff.diff(fromVersion ? fromVersion.document : null, row.document);
       }
 
