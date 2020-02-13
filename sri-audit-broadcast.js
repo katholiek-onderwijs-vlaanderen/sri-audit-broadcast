@@ -144,7 +144,7 @@ module.exports = {
             operation: {},
             type: {},
             resource: {},
-            // mergedResource: {},
+            mergedResource: {},
             document: {oninsert: versions.mapInsertDocument}
           },
 
