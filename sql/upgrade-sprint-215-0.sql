@@ -1,0 +1,1 @@
+CREATE INDEX lower_case_versions_resource_idx_text ON versions ((lower(resource::text)));
