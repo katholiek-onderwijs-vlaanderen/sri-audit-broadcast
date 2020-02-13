@@ -84,7 +84,7 @@ module.exports = {
         query.sql('SELECT * FROM versions WHERE resource = ').param(body.resource)
              .sql('LIMIT 1');
         const [ row ] = await pgExec(tx, query);
-        mapInsertDocument(incoming);
+        module.exports.mapInsertDocument(incoming);
         if (row != undefined  && !_.isEqual(row.document, incoming.document)) {
           throw new sriRequest.SriError({status: 409, errors: 
                       [ { code: 'already.initialized'
@@ -97,7 +97,7 @@ module.exports = {
              .sql(' AND resource = ').param(incoming.resource)
              .sql(' ORDER BY timestamp desc LIMIT 1');
         const [ row ] = await pgExec(tx, query);
-        mapInsertDocument(incoming);
+        module.exports.mapInsertDocument(incoming);
         if (row != undefined  && _.isEqual(row.document, incoming.document)) {
           throw new sriRequest.SriError({status: 409, errors: 
                       [ { code: 'same.version'
@@ -105,7 +105,22 @@ module.exports = {
                         , msg: 'This version is the same as the previous.'} ]
                     })
         }
+      } else if (incoming.operation === 'MERGE') {
+        query.sql('SELECT * FROM versions WHERE key != ').param(incoming.key)
+             .sql(' AND resource = ').param(incoming.resource)
+             .sql(' ORDER BY timestamp desc LIMIT 1');
+        const [ row ] = await pgExec(tx, query);
+        module.exports.mapInsertDocument(incoming);
+        if (row != undefined  && _.isEqual(row.mergedResource, incoming.mergedResource)) {
+          throw new sriRequest.SriError({status: 409, errors: 
+                      [ { code: 'same.version'
+                        , version: permalink
+                        , msg: 'This version is the same as the previous.'} ]
+                    })
+        }
       }
+
+
     }, { concurrency: 1 })
   },
 
