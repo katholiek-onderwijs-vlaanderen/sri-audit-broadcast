@@ -36,7 +36,7 @@ function calcType(json){
 
 module.exports = {
 
-  mapInsertDocument: function (element) {
+  mapInsertDocument: function (_key, element, _isNewResource) {
     removeDollarDollarFieldsFromJSON(element);
     return element;
   },
