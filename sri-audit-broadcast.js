@@ -145,7 +145,7 @@ module.exports = {
             type: {},
             resource: {},
             mergedResource: {},
-            document: {fieldToColumn: versions.mapInsertDocument}
+            document: {fieldToColumn: [ versions.mapInsertDocument ]}
           },
 
           beforeInsert: [ versions.requireDocumentOnCreateOrUpdate, security.checkIfTypeIsMappedToSecurityComponent ],
