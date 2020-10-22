@@ -52,7 +52,7 @@ module.exports = {
 
 
 
-    const  security = require('./js/security.js')(config.resourceToSecurityComponent, config.securityPlugin);
+    const  security = require('./js/security.js')(config.resourceToSecurityComponent, config.securityPlugins[1]);
     const  history = require('./js/history.js');
     const  versions = require('./js/versions.js');
 
@@ -184,12 +184,12 @@ module.exports = {
     config.securityPlugins.forEach(p => p.init(sriConfig));
     await sri4node.configure(app, sriConfig)
 
-    app.get('/updates', config.securityPlugin.getOauthValve().authenticationMiddleware(true), function (req, res) {
+    app.get('/updates', config.securityPlugins[1].getOauthValve().authenticationMiddleware(true), function (req, res) {
       const  forwardProto = req.get('X-Forwarded-Proto');
       res.send({href: (forwardProto ? forwardProto : req.protocol) + '://' + req.headers.host});
     });
 
-    app.get('/stats', config.securityPlugin.getOauthValve().authenticationMiddleware(true), function (req, res) {      
+    app.get('/stats', config.securityPlugins[1].getOauthValve().authenticationMiddleware(true), function (req, res) {      
       const [ subscribedResources, socketIds ] = _.partition(Object.keys(io.sockets.adapter.rooms), s => s.startsWith('/') );
       res.send({ nrConnections: socketIds.length, subscribedResources: subscribedResources });
     });
