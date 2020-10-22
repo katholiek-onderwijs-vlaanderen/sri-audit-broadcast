@@ -1,6 +1,6 @@
 {
   "name": "sri-audit-broadcast",
-  "version": "2.0.7",
+  "version": "2.0.8",
   "private": false,
   "description": "Audit and broadcast server",
   "main": "sri-audit-broadcast.js",

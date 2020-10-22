@@ -25,20 +25,20 @@ module.exports = function (resourceToSecurityComponent, securityPlugin) {
         resources = sriRequest.query.resources.split(',')
       } 
       console.log("[audit/broadcast - security] check access on resource(s) - " + resources);
-      await securityPlugin.allowedCheckBatch
+      await resourceToSecurityComponent(resource).securityPlugin.allowedCheckBatch
                         ( tx
                         , sriRequest
                         , resources.map( (resource) => 
-                              ({ component: resourceToSecurityComponent(resource), resource: resource, ability: 'read' }) )
+                              ({ component: resourceToSecurityComponent(resource).component, resource: resource, ability: 'read' }) )
                         )
     },
 
     doSecurityCheckGet: async function( tx, sriRequest, elements ) {
-      await securityPlugin.allowedCheckBatch
+      await resourceToSecurityComponent(resource).securityPlugin.allowedCheckBatch
                         ( tx
                         , sriRequest
                         , elements.map( ({ stored }) => 
-                              ({ component: resourceToSecurityComponent(stored.resource), resource: stored.resource, ability: 'read' }) )
+                              ({ component: resourceToSecurityComponent(stored.resource).component, resource: stored.resource, ability: 'read' }) )
                         )
     },
     doSecurityCheckPut: async function( tx, sriRequest, elements ) {
