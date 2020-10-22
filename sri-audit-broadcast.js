@@ -34,7 +34,7 @@ module.exports = {
     // if(!config.oauthValve){ configParamNotSet('oauthValve')  }
 
     if(!config.resourceToSecurityComponent){ configParamNotSet('resourceToSecurityComponent')  }
-    if(!config.securityPlugins){ configParamNotSet('securityPlugin')  }
+    if(!config.securityPlugins){ configParamNotSet('securityPlugins')  }
 
 
     //Load configuration
