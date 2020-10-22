@@ -34,7 +34,7 @@ module.exports = {
     // if(!config.oauthValve){ configParamNotSet('oauthValve')  }
 
     if(!config.resourceToSecurityComponent){ configParamNotSet('resourceToSecurityComponent')  }
-    // if(!config.securityPlugin){ configParamNotSet('securityPlugin')  }
+    if(!config.securityPlugins){ configParamNotSet('securityPlugin')  }
 
 
     //Load configuration
@@ -181,7 +181,7 @@ module.exports = {
         }],     
     };
     
-    config.securityPlugin.init(sriConfig)
+    config.securityPlugins.forEach(p => p.init(sriConfig));
     await sri4node.configure(app, sriConfig)
 
     app.get('/updates', config.securityPlugin.getOauthValve().authenticationMiddleware(true), function (req, res) {
