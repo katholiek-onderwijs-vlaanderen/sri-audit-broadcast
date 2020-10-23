@@ -20,7 +20,7 @@ module.exports = function (resourceToSecurityComponent, securityPlugins) {
     doSecurityQueryBasedOnResourceToSecurityComponent: async function ( tx, resources ) {
       const groupedResources = _.groupBy(resources, r => resourceToSecurityComponent(resource).securityPlugin.getBaseUrl());
 
-      await pSeries(Object.keys(groupedResources), securityPluginBaseUrl => {
+      await pSeries(Object.keys(groupedResources), async securityPluginBaseUrl => {
         console.log("[audit/broadcast - security] check access on resource(s) - " + resources);
         console.log("[audit/broadcast - security] quering security server " + securityPluginBaseUrl);
         await  securityPluginMap.get(securityPluginBaseUrl).allowedCheckBatch
