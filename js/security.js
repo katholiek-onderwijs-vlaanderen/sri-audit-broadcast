@@ -4,7 +4,6 @@
 const  _ = require('lodash');
 
 module.exports = function (resourceToSecurityComponent, securityPlugins) {
-  const securityPluginMap = new Map(securityPlugins.map(sp => [sp.getBaseUrl(), sp]));
   return {
     checkIfTypeIsMappedToSecurityComponent: async function ( tx, sriRequest, elements ) {
       elements.forEach( ({ incoming }) => {
@@ -18,6 +17,7 @@ module.exports = function (resourceToSecurityComponent, securityPlugins) {
     },
 
     doSecurityQueryBasedOnResourceToSecurityComponent: async function ( tx, resources ) {
+      const securityPluginMap = new Map(securityPlugins.map(sp => [sp.getBaseUrl(), sp]));
       const groupedResources = _.groupBy(resources, r => resourceToSecurityComponent(resource).securityPlugin.getBaseUrl());
 
       await pSeries(Object.keys(groupedResources), async securityPluginBaseUrl => {
