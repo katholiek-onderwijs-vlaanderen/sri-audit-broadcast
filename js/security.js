@@ -30,7 +30,7 @@ module.exports = function (resourceToSecurityComponent, securityPlugins) {
                                 ({ component: resourceToSecurityComponent(resource).component, resource: resource, ability: 'read' }) )
                           )
       });
-    }
+    },
 
     checkAccessOnResource: async function ( tx, sriRequest ) {
       // Only GET requests with specific resource specified can be checked in pre-process secure function,
