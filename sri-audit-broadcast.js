@@ -52,7 +52,7 @@ module.exports = {
 
 
 
-    const  security = require('./js/security.js')(config.resourceToSecurityComponent, config.securityPlugins[1]);
+    const  security = require('./js/security.js')(config.resourceToSecurityComponent, config.securityPlugins);
     const  history = require('./js/history.js');
     const  versions = require('./js/versions.js');
 
