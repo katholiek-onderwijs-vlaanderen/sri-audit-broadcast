@@ -38,7 +38,7 @@ module.exports = {
     
     const io = require('socket.io')(srv);
     const postgresAdapter = require('socket.io-adapter-postgres');
-    io.adapter(postgresAdapter(process.env.DATABASE_URL));
+    io.adapter(postgresAdapter({connectionString: process.env.DATABASE_URL}));
 
     const  security = require('./js/security.js')(config.resourceToSecurityComponent, config.securityPlugins);
     const  history = require('./js/history.js');
@@ -74,7 +74,6 @@ module.exports = {
       logrequests : true,
       logsql: true,
       logdebug: true,
-
 
       resources: [
         {
