@@ -16,9 +16,8 @@
     "jiff": "0.7.3",
     "p-each-series": "^2.1.0",
     "p-map": "1.2.0",
-    "redis": "2.8.0",
     "socket.io": "2.2.0",
-    "socket.io-redis": "5.2.0",
+    "socket.io-adapter-postgres": "^1.2.1",
     "sri4node": "https://github.com/katholiek-onderwijs-vlaanderen/sri4node.git#sprint-221-1"
   },
   "devDependencies ": {

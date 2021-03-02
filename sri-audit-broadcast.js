@@ -15,13 +15,6 @@ module.exports = {
 
   init: async function (config) {
 
-    const redis_url = process.env.REDIS_URL
-    if (!redis_url || redis_url == '') {
-      console.log('FATAL: no redis url configured!');
-      process.exit(1);
-    }
-
-
     //Check configuration
     const  configParamNotSet = function (param){
       console.error('[audit/broadcast - configuration]' + param + ' parameter is not set. Check your configuration!');
@@ -44,13 +37,8 @@ module.exports = {
 
     
     const io = require('socket.io')(srv);
-    const redis = require('redis');
-    const redisAdapter = require('socket.io-redis');
-    const pub = redis.createClient(redis_url);
-    const sub = redis.createClient(redis_url);
-    io.adapter(redisAdapter({ pubClient: pub, subClient: sub }));
-
-
+    const postgresAdapter = require('socket.io-adapter-postgres');
+    io.adapter(postgresAdapter(process.env.DATABASE_URL));
 
     const  security = require('./js/security.js')(config.resourceToSecurityComponent, config.securityPlugins);
     const  history = require('./js/history.js');
