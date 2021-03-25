@@ -13,7 +13,7 @@ module.exports = function (resourceToSecurityComponent, securityPlugins) {
     await pEachSeries(Object.keys(groupedResources), securityPluginBaseUrl => {
       console.log("[audit/broadcast - security] check access on resource(s) - " + resources);
       console.log("[audit/broadcast - security] quering security server " + securityPluginBaseUrl);
-      return securityPluginMap.get(securityPluginBaseUrl).allowedCheckBatch
+      return securityPluginMap.get(securityPluginBaseUrl).allowedCheckWithRawAndIsPartOfBatch
                         ( tx
                         , sriRequest
                         , groupedResources[securityPluginBaseUrl].map( (resource) => 
@@ -51,7 +51,7 @@ module.exports = function (resourceToSecurityComponent, securityPlugins) {
       await doSecurityQueryBasedOnResourceToSecurityComponent(tx, sriRequest, resources);
     },
     doSecurityCheckPut: async function( tx, sriRequest, elements ) {
-      await securityPlugins[1].allowedCheckBatch
+      await securityPlugins[1].allowedCheckWithRawAndIsPartOfBatch
                         ( tx
                         , sriRequest
                         , elements.map( ({ incoming }) => 
