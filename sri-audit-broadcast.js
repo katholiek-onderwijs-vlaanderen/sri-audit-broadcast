@@ -24,23 +24,23 @@ module.exports = {
     if(!config.app){ configParamNotSet('app')  }
     if(!config.server){ configParamNotSet('server')  }
     if(!config.express){ configParamNotSet('express')  }
-    // if(!config.oauthValve){ configParamNotSet('oauthValve')  }
-
-    if(!config.resourceToSecurityComponent){ configParamNotSet('resourceToSecurityComponent')  }
     if(!config.securityPlugins){ configParamNotSet('securityPlugins')  }
 
+    const securityEnabled = (config.securityPlugins.length > 0);
+    if (securityEnabled) {
+        if(!config.resourceToSecurityComponent){ configParamNotSet('resourceToSecurityComponent')  }
+    }
 
     //Load configuration
     const  app = config.app;
     const  srv = config.server;
-    const  pg = config.pg;
-
     
     const io = require('socket.io')(srv);
     const postgresAdapter = require('socket.io-adapter-postgres');
     io.adapter(postgresAdapter({connectionString: process.env.DATABASE_URL}));
 
-    const  security = require('./js/security.js')(config.resourceToSecurityComponent, config.securityPlugins);
+    const  security = securityEnabled ? require('./js/security.js')(config.resourceToSecurityComponent, config.securityPlugins) : null;
+
     const  history = require('./js/history.js');
     const  versions = require('./js/versions.js');
 
@@ -135,17 +135,17 @@ module.exports = {
             document: {fieldToColumn: [ versions.mapInsertDocument ]}
           },
 
-          beforeInsert: [ versions.requireDocumentOnCreateOrUpdate, security.checkIfTypeIsMappedToSecurityComponent ],
-          afterRead:    [ security.doSecurityCheckGet, versions.addPrevAndNextLinksToJson ],
+          beforeInsert: [ versions.requireDocumentOnCreateOrUpdate, ... securityEnabled ? [ security.checkIfTypeIsMappedToSecurityComponent ] : [] ],
+          afterRead:    [ ... securityEnabled ? [ security.doSecurityCheckGet ] : [], versions.addPrevAndNextLinksToJson ],
           afterUpdate:  [ versions.updateNotAllowed ],
-          afterInsert:  [ security.doSecurityCheckPut, versions.notSameVersion, broadcast ],
+          afterInsert:  [ ... securityEnabled ? [ security.doSecurityCheckPut ] : [], versions.notSameVersion, broadcast ],
 
           customRoutes: [ {
                             like: "",
                             routePostfix: "/history",
                             httpMethods: ['GET'],
                             alterMapping: (mapping) => {
-                              mapping.beforeRead = [ security.checkAccessOnResource, history.setFixedOrderForHistoryAndCheckSomeCustomPrerequisites ]
+                              mapping.beforeRead = [ ... securityEnabled ? [ security.checkAccessOnResource ] : [], history.setFixedOrderForHistoryAndCheckSomeCustomPrerequisites ]
                               mapping.afterRead = [ ]
 
                               mapping.query = {
@@ -171,12 +171,18 @@ module.exports = {
     config.securityPlugins.forEach(p => p.init(sriConfig));
     await sri4node.configure(app, sriConfig)
 
-    app.get('/updates', config.securityPlugins[1].getOauthValve().authenticationMiddleware(true), function (req, res) {
+    if (securityEnabled) {
+        app.get('/updates', config.securityPlugins[1].getOauthValve().authenticationMiddleware(true));
+    }
+    app.get('/updates', function (req, res) {
       const  forwardProto = req.get('X-Forwarded-Proto');
       res.send({href: (forwardProto ? forwardProto : req.protocol) + '://' + req.headers.host});
     });
 
-    app.get('/stats', config.securityPlugins[1].getOauthValve().authenticationMiddleware(true), function (req, res) {      
+    if (securityEnabled) {
+        app.get('/stats', config.securityPlugins[1].getOauthValve().authenticationMiddleware(true));
+    }
+    app.get('/stats', function (req, res) {
       const [ subscribedResources, socketIds ] = _.partition(Object.keys(io.sockets.adapter.rooms), s => s.startsWith('/') );
       res.send({ nrConnections: socketIds.length, subscribedResources: subscribedResources });
     });
