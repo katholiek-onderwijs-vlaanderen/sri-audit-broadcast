@@ -51,7 +51,10 @@ module.exports = function (resourceToSecurityComponent, securityPlugins) {
       await doSecurityQueryBasedOnResourceToSecurityComponent(tx, sriRequest, resources);
     },
     doSecurityCheckPut: async function( tx, sriRequest, elements ) {
-      await securityPlugins[1].allowedCheckWithRawAndIsPartOfBatch
+      // use allowedCheckBatch (and not allowedCheckWithRawAndIsPartOfBatch) as 'create'
+      // is an global ability for audit-broadcast-api component that is not associated
+      // with resources
+      await securityPlugins[1].allowedCheckBatch
                         ( tx
                         , sriRequest
                         , elements.map( ({ incoming }) => 

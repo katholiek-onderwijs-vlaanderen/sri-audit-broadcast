@@ -81,7 +81,7 @@ module.exports = {
       console.log(`[audit/broadcast - version - ${permalink} ] PUT version was:' + JSON.stringify(incoming)`);
       const query = $u.prepareSQL("validation");
       if (incoming.operation === 'INITIALIZE') {
-        query.sql('SELECT * FROM versions WHERE resource = ').param(body.resource)
+        query.sql('SELECT * FROM versions WHERE resource = ').param(incoming.resource)
              .sql('LIMIT 1');
         const [ row ] = await pgExec(tx, query);
         module.exports.mapInsertDocument(incoming);
